@@ -1,23 +1,25 @@
 import db from "../models";
 
 const task_form = (req, res) => {
+  console.log(req.body);
   const {
-    id = null,
     query_type = "create",
+    id = null,
     title = null,
     description = null,
     due_date = null,
     priority = null,
-    status = null,
+    status = "pending",
     assigned_to = null,
     created_at = null,
   } = req.body;
   db.sequelize
     .query(
-      `call task_form(:query_type, :title, :description, :due_date, :priority, :status, :assigned_to,:created_at)`,
+      `call task_form(:query_type,:id, :title, :description, :due_date, :priority, :status, :assigned_to,:created_at)`,
       {
         replacements: {
           query_type,
+          id,
           title,
           description,
           due_date,
@@ -36,8 +38,8 @@ const task_form = (req, res) => {
 };
 const get_task_form = (req, res) => {
   const {
-    id = null,
     query_type = "select",
+    id = null,
     title = null,
     description = null,
     due_date = null,
@@ -48,10 +50,11 @@ const get_task_form = (req, res) => {
   } = req.body;
   db.sequelize
     .query(
-      `call task_form(:query_type, :title, :description, :due_date, :priority, :status, :assigned_to,:created_at)`,
+      `call task_form(:query_type,:id, :title, :description, :due_date, :priority, :status, :assigned_to,:created_at)`,
       {
         replacements: {
           query_type,
+          id,
           title,
           description,
           due_date,
