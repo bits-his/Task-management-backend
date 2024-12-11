@@ -19,6 +19,7 @@ const create = async (req, res) => {
     address,
     password = "123456",
     role,
+    status,
     startups,
     starting_date,
     end_date
@@ -50,13 +51,14 @@ const create = async (req, res) => {
       userId = `${rolePrefix}00001`;
     }
     let newUser = {
-      id: userId,  // Corrected typo: userID -> userId
+      user_id: userId,
       fullname,
       email,
       phone_no,
       address,
       password,
       role,
+      status,
       startups,
       starting_date,
       end_date
