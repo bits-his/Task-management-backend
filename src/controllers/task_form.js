@@ -68,3 +68,5 @@ const get_task_form = (req, res) => {
       res.status(500).json({ success: false });
     });
 };
+
+export { task_form, get_task_form };
