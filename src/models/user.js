@@ -2,17 +2,26 @@ export default (sequelize, DataTypes) => {
   const User = sequelize.define(
     'User',
     {
-      firstname: DataTypes.STRING,
-      lastname: DataTypes.STRING,
-      username: DataTypes.STRING,
-      email: DataTypes.STRING,
+      fullname: DataTypes.STRING,
+      email: {
+        type: DataTypes.STRING,
+        unique: true,
+      },
+      phone_no: {
+        type: DataTypes.STRING,
+        unique: true,
+      },
+      address: DataTypes.STRING,
       password: DataTypes.STRING,
       role: DataTypes.STRING,
+      startups: DataTypes.STRING,
+      starting_date: DataTypes.STRING,
+      end_date: DataTypes.STRING,
     },
     {}
   );
 
-  User.associate = function(models) {
+  User.associate = function (models) {
     // associations go here
   };
 

@@ -1,16 +1,18 @@
 import passport from 'passport';
 import config from '../config/config';
 import { allowOnly } from '../services/routesHelper';
-import { create, login, findAllUsers, 
-    findById, update, deleteUser
+import {
+  create, login, findAllUsers,
+  findById, update, deleteUser
 } from '../controllers/user';
 
 module.exports = (app) => {
   // create a new user
   app.post(
     '/api/users/create',
-    passport.authenticate('jwt', { session: false }),
-    allowOnly(config.accessLevels.admin, create)
+    // passport.authenticate('jwt', { session: false }),
+    // allowOnly(config.accessLevels.admin, create)
+    create
   );
 
   // user login
@@ -18,11 +20,12 @@ module.exports = (app) => {
 
   //retrieve all users
   app.get(
-    '/api/users', 
-    passport.authenticate('jwt', { 
-      session: false 
-    }),
-    allowOnly(config.accessLevels.admin, findAllUsers)
+    '/api/users',
+    // passport.authenticate('jwt', {
+    //   session: false
+    // }),
+    // allowOnly(config.accessLevels.admin, findAllUsers)
+    findAllUsers
   );
 
   // retrieve user by id

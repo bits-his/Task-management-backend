@@ -11,29 +11,29 @@ function validateRegisterForm(data) {
   data.email = !isEmpty(data.email) ? data.email : '';
   data.password = !isEmpty(data.password) ? data.password : '';
 
-  if (!Validator.isLength(data.firstname, { min: 2, max: 30 })) {
-    errors.firstname = 'First Name must be between 2 and 30 character long';
-  }
+  // if (!Validator.isLength(data.firstname, { min: 2, max: 30 })) {
+  //   errors.firstname = 'First Name must be between 2 and 30 character long';
+  // }
 
-  if (!Validator.isLength(data.lastname, { min: 2, max: 30 })) {
-    errors.lastname = 'Last Name must be between 2 and 30 character long';
-  }
+  // if (!Validator.isLength(data.lastname, { min: 2, max: 30 })) {
+  //   errors.lastname = 'Last Name must be between 2 and 30 character long';
+  // }
 
-  if (Validator.isEmpty(data.firstname)) {
-    errors.firstname = 'First Name field is required';
-  }
+  // if (Validator.isEmpty(data.firstname)) {
+  //   errors.firstname = 'First Name field is required';
+  // }
 
-  if (Validator.isEmpty(data.lastname)) {
-    errors.lastname = 'Last Name field is required';
-  }
+  // if (Validator.isEmpty(data.lastname)) {
+  //   errors.lastname = 'Last Name field is required';
+  // }
 
   if (Validator.isEmpty(data.role)) {
     errors.role = 'Role field is required';
   }
 
-  if (Validator.isEmpty(data.username)) {
-    errors.username = 'username field is required';
-  }
+  // if (Validator.isEmpty(data.username)) {
+  //   errors.username = 'username field is required';
+  // }
 
   if (Validator.isEmpty(data.email)) {
     errors.email = 'email field is required';
@@ -43,13 +43,13 @@ function validateRegisterForm(data) {
     errors.email = 'email is invalid';
   }
 
-  if (Validator.isEmpty(data.password)) {
-    errors.password = 'password field is required';
-  }
+  // if (Validator.isEmpty(data.password)) {
+  //   errors.password = 'password field is required';
+  // }
 
-  if (!Validator.isLength(data.password, { min: 6, max: 30 })) {
-    errors.password = 'password must be at least 6 characters long';
-  }
+  // if (!Validator.isLength(data.password, { min: 6, max: 30 })) {
+  //   errors.password = 'password must be at least 6 characters long';
+  // }
 
   return {
     errors,
