@@ -33,8 +33,10 @@ require("./config/passport")(passport);
 //default route
 app.get("/", (req, res) => res.send("Hello my World"));
 
-require("./routes/user.js")(app);
-require("./routes/startups.js")(app);
+require('./routes/user.js')(app);
+require('./routes/startups.js')(app);
+require('./routes/excuse.js')(app);
+require('./routes/weekly.js')(app);
 require("./routes/task_form.js")(app);
 
 //create a server
