@@ -15,13 +15,16 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         unique: true,
       },
-      address: DataTypes.STRING,
+      address: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       password: DataTypes.STRING,
       role: DataTypes.STRING,
       status: DataTypes.STRING,
       startups: DataTypes.STRING,
-      starting_date: DataTypes.STRING,
-      end_date: DataTypes.STRING,
+      starting_date: DataTypes.DATE,
+      end_date: DataTypes.DATE,
     },
     {}
   );

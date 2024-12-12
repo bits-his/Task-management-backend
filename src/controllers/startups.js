@@ -2,7 +2,8 @@ import db from "../models";
 
 
 const findAllStartups = (req, res) => {
-const { query_type= 'select', startup_id = null ,name = null, description = null, logo = null, created_by = null} = req.body;
+const {query_type= 'select-all'} = req.query;
+const { startup_id = null ,name = null, description = null, logo = null, created_by = null} = req.body;
    db.sequelize
      .query(`CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`, {
        replacements: {
