@@ -128,8 +128,9 @@ const login = (req, res) => {
                 phone_no,
                 address,
                 password: user.password,
+                startup_id:user.startups,
+                role,
               },
-              role,
             });
           });
         } else {
