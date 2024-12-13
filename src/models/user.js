@@ -23,8 +23,8 @@ export default (sequelize, DataTypes) => {
       role: DataTypes.STRING,
       status: DataTypes.STRING,
       startups: DataTypes.STRING,
-      starting_date: DataTypes.DATE,
-      end_date: DataTypes.DATE,
+      starting_date: DataTypes.STRING,
+      end_date: DataTypes.STRING,
     },
     {}
   );
