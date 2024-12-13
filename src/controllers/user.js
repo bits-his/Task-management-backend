@@ -111,7 +111,7 @@ const login = (req, res) => {
       bcrypt.compare(password, user.password).then((isMatch) => {
         if (isMatch) {
           // Generate JWT token
-          const { id, user_id, fullname, role, phone_no, address } = user;
+          const { id, user_id, fullname, role, phone_no, address, } = user;
           const payload = { id, user_id, fullname, role };
 
           jwt.sign(payload, "secret", { expiresIn: 3600 }, (err, token) => {
