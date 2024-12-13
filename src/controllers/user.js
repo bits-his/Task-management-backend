@@ -92,54 +92,52 @@ const create = async (req, res) => {
 const login = (req, res) => {
   const { errors, isValid } = validateLoginForm(req.body);
 
-  // check validation
+  // Check validation
   if (!isValid) {
     return res.status(400).json(errors);
   }
 
   const { email, password } = req.body;
 
-  User.findAll({
-    where: {
-      email
-    }
+  User.findOne({
+    where: { email },
   })
-    .then(user => {
-
-      //check for user
-      if (!user.length) {
-        errors.email = 'User not found!';
-        return res.status(404).json(errors);
+    .then((user) => {
+      if (!user) {
+        return res.status(404).json({ email: "User not found!" });
       }
 
-      let originalPassword = user[0].dataValues.password
+      // Check for password match
+      bcrypt.compare(password, user.password).then((isMatch) => {
+        if (isMatch) {
+          // Generate JWT token
+          const { id, user_id, fullname, role, phone_no, address } = user;
+          const payload = { id, user_id, fullname, role };
 
-      //check for password
-      bcrypt
-        .compare(password, originalPassword)
-        .then(isMatch => {
-          if (isMatch) {
-            // user matched
-            console.log('matched!')
-            const { id, username } = user[0].dataValues;
-            const payload = { id, username }; //jwt payload
-            // console.log(payload)
-
-            jwt.sign(payload, 'secret', {
-              expiresIn: 3600
-            }, (err, token) => {
-              res.json({
-                success: true,
-                token: 'Bearer ' + token,
-                role: user[0].dataValues.role
-              });
+          jwt.sign(payload, "secret", { expiresIn: 3600 }, (err, token) => {
+            if (err) {
+              return res.status(500).json({ error: "Token generation failed" });
+            }
+            return res.status(200).json({
+              success: true,
+              token: `Bearer ${token}`,
+              user: {
+                user_id,
+                fullname,
+                email: user.email,
+                phone_no,
+                address,
+                password: user.password,
+              },
+              role,
             });
-          } else {
-            errors.password = 'Password not correct';
-            return res.status(400).json(errors);
-          }
-        }).catch(err => console.log(err));
-    }).catch(err => res.status(500).json({ err }));
+          });
+        } else {
+          return res.status(400).json({ password: "Incorrect password" });
+        }
+      });
+    })
+    .catch((err) => res.status(500).json({ error: "Server error" }));
 };
 
 // fetch all users
