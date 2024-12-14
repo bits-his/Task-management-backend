@@ -190,11 +190,46 @@ const deleteUser = (req, res) => {
     .catch(err => res.status(500).json({ msg: 'Failed to delete!' }));
 };
 
+const verifyUserToken = (req, res) => {
+  const authToken = req.headers["authorization"];
+  const token = authToken.split(" ")[1];
+  // console.log(token)
+  jwt.verify(token, "secret", (err, decoded) => {
+    // console.log(decoded)
+    if (err) {
+      return res.json({
+        success: false,
+        message: "Failed to authenticate token.",
+        err,
+      });
+    }
+    const { id } = decoded;
+    User.findAll({
+      where: { id },
+    })
+      .then((user) => {
+        if (!user.length) {
+          return res.json({ success: false, message: "user not found" });
+        }
+        res.json({
+          success: true,
+          user: user[0],
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+        res
+          .status(500)
+          .json({ success: false, message: "An error occured", err });
+      });
+  });
+};
+
 export {
   create,
   login,
   findAllUsers,
   findById,
   update,
-  deleteUser
+  deleteUser,verifyUserToken
 }

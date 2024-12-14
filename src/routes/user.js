@@ -3,7 +3,8 @@ import config from '../config/config';
 import { allowOnly } from '../services/routesHelper';
 import {
   create, login, findAllUsers,
-  findById, update, deleteUser
+  findById, update, deleteUser,
+  verifyUserToken
 } from '../controllers/user';
 
 module.exports = (app) => {
@@ -54,5 +55,7 @@ module.exports = (app) => {
     }),
     allowOnly(config.accessLevels.admin, deleteUser)
   );
+
+    app.get(`/verify-token`, verifyUserToken);
 
 };

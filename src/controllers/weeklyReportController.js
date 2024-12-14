@@ -149,63 +149,15 @@ const transformData = (dbResults, currentUserId) => {
 };
 
 export const getAllReports = (req, res) => {
-    const currentUserId = req.user && req.user.id;
+    const {startup_id=0}=req.query;
 
-    db.sequelize.query(`WITH RECURSIVE week_dates AS (
-    SELECT 
-        DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY) AS report_date 
-    UNION ALL
-    SELECT 
-        report_date + INTERVAL 1 DAY
-    FROM 
-        week_dates
-    WHERE 
-        report_date < DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY) + INTERVAL 4 DAY
-)
-SELECT 
-    u.id AS user_id,
-    u.fullname AS user_name,
-    u.role,
-    u.startups AS startup_name,
-    DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY) AS week_start,
-    wd.report_date,
-    COALESCE(wr.content, '') AS report_content,
-    COALESCE(wr.status, 'pending') AS report_status,
-    wr.last_edited,
-    GROUP_CONCAT(t.title ORDER BY t.submitted_date SEPARATOR ', ') AS daily_tasks,
-    COALESCE(e.excuses_type, '') AS excuse_type,
-    COALESCE(e.status, 'pending') AS excuse_status,
-    COALESCE(e.excuse_description, '') AS excuse_description,
-      e.excuse_day
-FROM Users u
-CROSS JOIN week_dates wd -- Generate all dates for every user
-LEFT JOIN weekly_reports wr 
-    ON u.id = wr.user_id 
-    AND wd.report_date = wr.report_date
-LEFT JOIN task_form t 
-    ON wd.report_date = t.submitted_date 
-    AND t.assigned_to = u.id
-    AND t.status IN ('completed', 'underReview')
-LEFT JOIN excuses e 
-    ON wd.report_date = e.excuse_day 
-    AND e.create_by = u.id
-WHERE u.startups IS NOT NULL
-GROUP BY 
-    u.id, 
-    wd.report_date, 
-    wr.content, 
-    wr.status, 
-    wr.last_edited, 
-    e.excuses_type, 
-    e.status, 
-    e.excuse_description,
-    e.excuse_day
-ORDER BY u.id, wd.report_date;
-`,
-        { type: db.sequelize.QueryTypes.SELECT }
+    db.sequelize.query(`CALL weekly_report(:startup_id)`,
+       {
+        replacements: {startup_id:parseInt(startup_id)}
+       }
     )
     .then((results) => {
-        const transformedData = transformData(results, currentUserId);
+        const transformedData = transformData(results, startup_id);
         res.json(transformedData);
     })
     .catch((err) => {
