@@ -58,16 +58,14 @@ const get_task_form = (req, res) => {
     rating = null,
     comment = null,
     created_by = null,
-    startup_id = null,
     submitted_at = null,
   } = req.body;
 
-  const { query_type = "select", task_id = 0 } = req.query;
-
+  const { query_type = "select", task_id = 0, startup_id = null, } = req.query;
+console.log(req.query)
   db.sequelize
     .query(
-      `call task_form(
-      :query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
+      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
       {
         replacements: {
           query_type,

@@ -153,7 +153,7 @@ export const getAllReports = (req, res) => {
 
     db.sequelize.query(`CALL weekly_report(:startup_id)`,
        {
-        replacements: {startup_id:parseInt(startup_id)}
+        replacements: {startup_id:startup_id}
        }
     )
     .then((results) => {
