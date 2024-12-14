@@ -25,7 +25,7 @@ const create = async (req, res) => {
     end_date
   } = req.body;
 
-  // check validation
+ 
   if (!isValid) {
     return res.status(400).json(errors);
   }
