@@ -45,8 +45,14 @@ const create = async (req, res) => {
     })
     console.log(latestUser)
 
-    if (latestUser && String(latestUser.id).startsWith(rolePrefix)) {
-      const latestIdNum = parseInt(String(latestUser.id).slice(3)) + 1;
+    if (latestUser && String(latestUser.user_id).startsWith(rolePrefix)) {
+      const latestIdNum = parseInt(String(latestUser.user_id).slice(3)) + 1;
+      console.log(
+        "latestIdNum",
+        latestIdNum,
+        parseInt(String(latestUser.user_id).slice(3)),
+        latestUser.user_id.slice(3)
+      );
       userId = `${rolePrefix}${latestIdNum.toString().padStart(5, "0")}`;
     } else {
       userId = `${rolePrefix}00001`;
