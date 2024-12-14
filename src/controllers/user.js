@@ -20,7 +20,7 @@ const create = async (req, res) => {
     password = "123456",
     role,
     status,
-    startups,
+    startup_id,
     starting_date,
     end_date
   } = req.body;
@@ -43,6 +43,7 @@ const create = async (req, res) => {
       where: { role },
       order: [["createdAt", 'DESC']],
     })
+    console.log(latestUser)
 
     if (latestUser && String(latestUser.id).startsWith(rolePrefix)) {
       const latestIdNum = parseInt(String(latestUser.id).slice(3)) + 1;
@@ -59,7 +60,7 @@ const create = async (req, res) => {
       password,
       role,
       status,
-      startups,
+      startup_id,
       starting_date,
       end_date
     };
@@ -128,7 +129,7 @@ const login = (req, res) => {
                 phone_no,
                 address,
                 password: user.password,
-                startup_id:user.startups,
+                startup_id:user.startup_id,
                 role,
               },
             });

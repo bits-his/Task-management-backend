@@ -166,7 +166,7 @@ SELECT
     u.id AS user_id,
     u.fullname AS user_name,
     u.role,
-    u.startups AS startup_name,
+    u.startup_id AS startup_name,
     DATE(NOW() - INTERVAL WEEKDAY(NOW()) DAY) AS week_start,
     wd.report_date,
     COALESCE(wr.content, '') AS report_content,
@@ -189,7 +189,7 @@ LEFT JOIN task_form t
 LEFT JOIN excuses e 
     ON wd.report_date = e.excuse_day 
     AND e.create_by = u.id
-WHERE u.startups IS NOT NULL
+WHERE u.startup_id IS NOT NULL
 GROUP BY 
     u.id, 
     wd.report_date, 

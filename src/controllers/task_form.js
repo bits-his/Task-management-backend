@@ -1,10 +1,11 @@
+import { NULL } from "mysql2/lib/constants/types";
 import db from "../models";
 
 const task_form = (req, res) => {
   console.log(req.body);
   const {
     query_type = "create",
-    task_id = "",
+    task_id = NULL,
     title = null,
     description = null,
     due_date = null,

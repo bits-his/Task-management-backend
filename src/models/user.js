@@ -22,7 +22,7 @@ export default (sequelize, DataTypes) => {
       password: DataTypes.STRING,
       role: DataTypes.STRING,
       status: DataTypes.STRING,
-      startups: DataTypes.STRING,
+      startup_id: DataTypes.STRING,
       starting_date: DataTypes.STRING,
       end_date: DataTypes.STRING,
     },
