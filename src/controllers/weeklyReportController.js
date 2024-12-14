@@ -61,7 +61,7 @@ const getUserReports = (req, res) => {
 const transformData = (dbResults, currentUserId) => {
     const currentUser = dbResults.find(user => user.user_id === currentUserId);
 
-    // Create a Map to store unique team members
+ 
     const teamMembersMap = new Map();
     dbResults.forEach(row => {
         if (!teamMembersMap.has(row.user_id)) {
@@ -94,7 +94,7 @@ const transformData = (dbResults, currentUserId) => {
         };
 
         if (!week) {
-            // Create new week entry
+          
             weeks.push({
                 week_start: row.week_start,
                 reports: [{
@@ -107,7 +107,7 @@ const transformData = (dbResults, currentUserId) => {
         } else {
             const existingUserReport = week.reports.find(r => r.user_id === row.user_id);
             if (!existingUserReport) {
-                // Add new user report to existing week
+         
                 week.reports.push({
                     user_id: row.user_id,
                     name: row.user_name,
@@ -115,17 +115,17 @@ const transformData = (dbResults, currentUserId) => {
                     daily_reports: [dailyReport]
                 });
             } else {
-                // Add daily report to existing user report
+                
                 existingUserReport.daily_reports.push(dailyReport);
             }
         }
         return weeks;
     }, []);
 
-    // Sort weekly reports by date (newest first)
+
     weeklyReports.sort((a, b) => new Date(b.week_start) - new Date(a.week_start));
 
-    // Sort daily reports by date for each user
+
     weeklyReports.forEach(week => {
         week.reports.forEach(userReport => {
             userReport.daily_reports.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -153,7 +153,7 @@ export const getAllReports = (req, res) => {
 
     db.sequelize.query(`CALL weekly_report(:startup_id)`,
        {
-        replacements: {startup_id:parseInt(startup_id)}
+        replacements: {startup_id:startup_id}
        }
     )
     .then((results) => {
