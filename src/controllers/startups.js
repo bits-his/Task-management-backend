@@ -89,4 +89,21 @@ const updateStartups = (req, res) => {
          });
 }
 
+
+
+export const getAllStartupMembers = (req, res) => {
+const {startup_id=""}=req.query;
+  db.sequelize.query(`CALL startup_members(:startup_id)`,{
+    replacements: {
+      startup_id
+    }
+  })
+  .then((resp) => {
+       res.json({ success: true, data: resp });
+     })
+     .catch((err) => {
+       res.json({ success: false, message: err });
+     });
+}
+
 export { findAllStartups, createStartups };
