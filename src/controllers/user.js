@@ -111,7 +111,9 @@ const login = (req, res) => {
   })
     .then((user) => {
       if (!user) {
-        return res.status(404).json({ email: "User not found!" });
+        return res
+          .status(404)
+          .json({ success: false, error: "User not found!" });
       }
 
       // Check for password match
@@ -141,7 +143,9 @@ const login = (req, res) => {
             });
           });
         } else {
-          return res.status(400).json({ password: "Incorrect password" });
+          return res
+            .status(400)
+            .json({ success: false, error: "Incorrect password" });
         }
       });
     })
