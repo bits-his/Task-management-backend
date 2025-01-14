@@ -45,7 +45,7 @@ const task_form = (req, res) => {
     .catch((err) => {
       console.log(err);
       res.status(500).json({ success: false });
-    });
+    });  
 };
 const get_task_form = (req, res) => {
   const {
