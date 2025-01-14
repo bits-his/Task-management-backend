@@ -236,11 +236,74 @@ const verifyUserToken = (req, res) => {
   });
 };
 
+const updateUser = (req, res) => {
+  const id = req.params.userId;
+  User.update(req.body, { where: { id } })
+    .then(() => res.status(200).json({ msg: 'User has been updated successfully!' }))
+    .catch(err => res.status(500).json({ msg: 'Failed to update!' }));
+};
+
+const UpdateUserStatus = async (req, res) => {
+  const { userId } = req.params;
+  const { 
+    startup,
+    role,
+    dateFrom,
+    dateTo,
+    status 
+  } = req.body;
+
+  try {
+    // Find the user first to make sure they exist
+    const user = await User.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Update the user's information
+    await User.update(
+      { 
+        startup_id: startup,
+        role,
+        starting_date: dateFrom,
+        end_date: dateTo,
+        status,
+        updated_at: new Date()
+      },
+      { where: { id: userId } }
+    );
+
+    // Fetch the updated user
+    const updatedUser = await User.findOne({ where: { id: userId } });
+
+    return res.status(200).json({
+      success: true,
+      message: 'User status and details updated successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user',
+      error: error.message
+    });
+  }
+};
+
 export {
   create,
   login,
   findAllUsers,
   findById,
   update,
-  deleteUser,verifyUserToken
+  updateUser,
+  deleteUser,
+  verifyUserToken,
+  UpdateUserStatus
 }

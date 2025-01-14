@@ -4,7 +4,9 @@ import { allowOnly } from '../services/routesHelper';
 import {
   create, login, findAllUsers,
   findById, update, deleteUser,
-  verifyUserToken
+  verifyUserToken,
+  updateUser,
+  UpdateUserStatus
 } from '../controllers/user';
 
 module.exports = (app) => {
@@ -15,6 +17,8 @@ module.exports = (app) => {
     // allowOnly(config.accessLevels.admin, create)
     create
   );
+
+  app.put('/api/users/update/:userId', updateUser);
 
   // user login
   app.post('/api/users/login', login);
@@ -57,5 +61,7 @@ module.exports = (app) => {
   );
 
     app.get(`/verify-token`, verifyUserToken);
+
+  app.post('/api/users/:userId/approve', UpdateUserStatus);
 
 };
