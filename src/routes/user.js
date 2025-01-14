@@ -6,8 +6,7 @@ import {
   findById, update, deleteUser,
   verifyUserToken,
   updateUser,
-  UpdateUserStatus,
-  updateUserStatus
+  UpdateUserStatus
 } from '../controllers/user';
 
 module.exports = (app) => {
@@ -64,7 +63,5 @@ module.exports = (app) => {
     app.get(`/verify-token`, verifyUserToken);
 
   app.post('/api/users/:userId/approve', UpdateUserStatus);
-
-  app.put('/api/users/:userId/status', updateUserStatus);
 
 };

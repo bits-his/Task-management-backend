@@ -292,58 +292,6 @@ const UpdateUserStatus = async (req, res) => {
   }
 };
 
-const updateUserStatus = async (req, res) => {
-  const { userId } = req.params;
-  const { status } = req.body;
-
-  // Validate status
-  const validStatuses = ['Active', 'Deactivated', 'Suspended'];
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid status value'
-    });
-  }
-
-  try {
-    // Find the user first
-    const user = await User.findOne({ where: { id: userId } });
-    
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
-      });
-    }
-
-    // Update user status
-    await User.update(
-      { 
-        status,
-        updated_at: new Date()
-      },
-      { where: { id: userId } }
-    );
-
-    // Fetch updated user
-    const updatedUser = await User.findOne({ where: { id: userId } });
-
-    return res.status(200).json({
-      success: true,
-      message: `User has been ${status.toLowerCase()} successfully`,
-      user: updatedUser
-    });
-
-  } catch (error) {
-    console.error('Error updating user status:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update user status',
-      error: error.message
-    });
-  }
-};
-
 export {
   create,
   login,
@@ -353,6 +301,5 @@ export {
   updateUser,
   deleteUser,
   verifyUserToken,
-  UpdateUserStatus,
-  updateUserStatus
+  UpdateUserStatus
 }
