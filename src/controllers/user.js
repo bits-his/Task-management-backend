@@ -245,13 +245,7 @@ const updateUser = (req, res) => {
 
 const UpdateUserStatus = async (req, res) => {
   const { userId } = req.params;
-  const { 
-    startup,
-    role,
-    dateFrom,
-    dateTo,
-    status 
-  } = req.body;
+  const { status, remarks } = req.body;
 
   try {
     // Find the user first to make sure they exist
@@ -264,14 +258,11 @@ const UpdateUserStatus = async (req, res) => {
       });
     }
 
-    // Update the user's information
+    // Update the user's status
     await User.update(
       { 
-        startup_id: startup,
-        role,
-        starting_date: dateFrom,
-        end_date: dateTo,
         status,
+        remarks,
         updated_at: new Date()
       },
       { where: { id: userId } }
@@ -282,15 +273,75 @@ const UpdateUserStatus = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'User status and details updated successfully',
+      message: 'User status updated successfully',
       user: updatedUser
     });
 
   } catch (error) {
-    console.error('Error updating user:', error);
+    console.error('Error updating user status:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to update user',
+      message: 'Failed to update user status',
+      error: error.message
+    });
+  }
+};
+
+const updateUserStatus = async (req, res) => {
+  const { userId } = req.params;
+  const { status } = req.body;
+
+  // Validate status
+  const validStatuses = ['Active', 'Deactivated', 'Suspended'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid status value'
+    });
+  }
+
+  try {
+    // Find the user first
+    const user = await User.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Check if user's status is Approved before allowing status update
+    if (user.status !== 'Approved') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot update status. User must be Approved first'
+      });
+    }
+
+    // Update user status
+    await User.update(
+      { 
+        status,
+        updated_at: new Date()
+      },
+      { where: { id: userId } }
+    );
+
+    // Fetch updated user
+    const updatedUser = await User.findOne({ where: { id: userId } });
+
+    return res.status(200).json({
+      success: true,
+      message: `User has been ${status.toLowerCase()} successfully`,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user status',
       error: error.message
     });
   }
@@ -305,5 +356,6 @@ export {
   updateUser,
   deleteUser,
   verifyUserToken,
-  UpdateUserStatus
+  UpdateUserStatus,
+  updateUserStatus
 }
