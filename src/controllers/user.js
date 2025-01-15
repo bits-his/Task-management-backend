@@ -343,6 +343,23 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+export const getJoinUser =  (req, res) => {
+  db.sequelize.query(
+    `CALL select_user()`
+  )
+  .then((data) => res.json({ success: true, data }))
+  .catch((err) => {
+    console.log(err);
+    res.status(500).json({ success: false });
+  });
+}
+const reactivateUser = (req, res) => {
+  const id = req.params.userId;
+  User.update(req.body, { where: { id } })
+    .then(() => res.status(200).json({ msg: 'User has been updated successfully!' }))
+    .catch(err => res.status(500).json({ msg: 'Failed to update!' }));
+};
+
 export {
   create,
   login,
@@ -353,5 +370,6 @@ export {
   deleteUser,
   verifyUserToken,
   UpdateUserStatus,
-  updateUserStatus
+  updateUserStatus,
+  reactivateUser
 }

@@ -7,7 +7,9 @@ import {
   verifyUserToken,
   updateUser,
   UpdateUserStatus,
-  updateUserStatus
+  updateUserStatus,
+  getJoinUser,
+  reactivateUser,
 } from '../controllers/user';
 
 module.exports = (app) => {
@@ -20,6 +22,8 @@ module.exports = (app) => {
   );
 
   app.put('/api/users/update/:userId', updateUser);
+
+  app.put('/api/users/:userId/reactivate', reactivateUser);
 
   // user login
   app.post('/api/users/login', login);
@@ -66,5 +70,8 @@ module.exports = (app) => {
   app.post('/api/users/:userId/approve', UpdateUserStatus);
 
   app.put('/api/users/:userId/status', updateUserStatus);
+
+  app.get('/api/users/join-user', getJoinUser);
+  app.get('/join-user', getJoinUser);
 
 };
