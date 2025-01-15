@@ -111,7 +111,9 @@ const login = (req, res) => {
   })
     .then((user) => {
       if (!user) {
-        return res.status(404).json({ email: "User not found!" });
+        return res
+          .status(404)
+          .json({ success: false, error: "User not found!" });
       }
 
       // Check for password match
@@ -141,7 +143,9 @@ const login = (req, res) => {
             });
           });
         } else {
-          return res.status(400).json({ password: "Incorrect password" });
+          return res
+            .status(400)
+            .json({ success: false, error: "Incorrect password" });
         }
       });
     })
@@ -232,11 +236,126 @@ const verifyUserToken = (req, res) => {
   });
 };
 
+const updateUser = (req, res) => {
+  const id = req.params.userId;
+  User.update(req.body, { where: { id } })
+    .then(() => res.status(200).json({ msg: 'User has been updated successfully!' }))
+    .catch(err => res.status(500).json({ msg: 'Failed to update!' }));
+};
+
+const UpdateUserStatus = async (req, res) => {
+  const { userId } = req.params;
+  const { status, remarks } = req.body;
+
+  try {
+    // Find the user first to make sure they exist
+    const user = await User.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Update the user's status
+    await User.update(
+      { 
+        status,
+        remarks,
+        updated_at: new Date()
+      },
+      { where: { id: userId } }
+    );
+
+    // Fetch the updated user
+    const updatedUser = await User.findOne({ where: { id: userId } });
+
+    return res.status(200).json({
+      success: true,
+      message: 'User status updated successfully',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user status',
+      error: error.message
+    });
+  }
+};
+
+const updateUserStatus = async (req, res) => {
+  const { userId } = req.params;
+  const { status } = req.body;
+
+  // Validate status
+  const validStatuses = ['Active', 'Deactivated', 'Suspended'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid status value'
+    });
+  }
+
+  try {
+    // Find the user first
+    const user = await User.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Check if user's status is Approved before allowing status update
+    if (user.status !== 'Approved') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot update status. User must be Approved first'
+      });
+    }
+
+    // Update user status
+    await User.update(
+      { 
+        status,
+        updated_at: new Date()
+      },
+      { where: { id: userId } }
+    );
+
+    // Fetch updated user
+    const updatedUser = await User.findOne({ where: { id: userId } });
+
+    return res.status(200).json({
+      success: true,
+      message: `User has been ${status.toLowerCase()} successfully`,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user status',
+      error: error.message
+    });
+  }
+};
+
 export {
   create,
   login,
   findAllUsers,
   findById,
   update,
-  deleteUser,verifyUserToken
+  updateUser,
+  deleteUser,
+  verifyUserToken,
+  UpdateUserStatus,
+  updateUserStatus
 }

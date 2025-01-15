@@ -5,7 +5,7 @@ const task_form = (req, res) => {
   console.log(req.body);
   const {
     query_type = "create",
-    task_id = NULL,
+    id = NULL,
     title = null,
     description = null,
     due_date = null,
@@ -22,11 +22,11 @@ const task_form = (req, res) => {
   db.sequelize
     .query(
       `call task_form(
-      :query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
+      :query_type,:id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
       {
         replacements: {
           query_type,
-          task_id,
+          id,
           title,
           description,
           due_date,
@@ -45,7 +45,7 @@ const task_form = (req, res) => {
     .catch((err) => {
       console.log(err);
       res.status(500).json({ success: false });
-    });
+    });  
 };
 const get_task_form = (req, res) => {
   const {
