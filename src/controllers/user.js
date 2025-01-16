@@ -37,7 +37,7 @@ const create = async (req, res) => {
     }
 
     let userId;
-    const rolePrefix = role.slice(0, 3).toUpperCase();
+    const rolePrefix = "user"
 
     const latestUser = await User.findOne({
       where: { role },
@@ -243,6 +243,7 @@ const updateUser = (req, res) => {
     .catch(err => res.status(500).json({ msg: 'Failed to update!' }));
 };
 
+
 const UpdateUserStatus = async (req, res) => {
   const { userId } = req.params;
   const { status, remarks } = req.body;
@@ -347,6 +348,55 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+const updateUserStartupStatus = async (req, res) => {
+  const { userId } = req.params;
+  const { role, startup, status } = req.body;
+
+  console.log(req.body)
+  console.log(userId)
+
+  try {
+    // Find the user first to make sure they exist
+    const user = await User.findOne({ where: { id: userId } });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Update the user's information
+    await User.update(
+      { 
+        role,
+        startup_id: startup,
+        status,
+        updated_at: new Date()
+      },
+      { where: { id: userId } }
+    );
+
+    // Fetch the updated user
+    const updatedUser = await User.findOne({ where: { id: userId } });
+
+    return res.status(200).json({
+      success: true,
+      message: 'User status and startup updated successfully',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update user status and startup',
+      error: error.message
+    });
+  }
+};
+
+
+
 export const getJoinUser =  (req, res) => {
   db.sequelize.query(
     `CALL select_user()`
@@ -375,5 +425,6 @@ export {
   verifyUserToken,
   UpdateUserStatus,
   updateUserStatus,
-  reactivateUser
+  reactivateUser,
+   updateUserStartupStatus
 }
