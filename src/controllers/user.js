@@ -37,7 +37,7 @@ const create = async (req, res) => {
     }
 
     let userId;
-    const rolePrefix = role.slice(0, 3).toUpperCase();
+    const rolePrefix = "USR";
 
     const latestUser = await User.findOne({
       where: { role },
@@ -46,12 +46,12 @@ const create = async (req, res) => {
     console.log(latestUser)
 
     if (latestUser && String(latestUser.user_id).startsWith(rolePrefix)) {
-      const latestIdNum = parseInt(String(latestUser.user_id).slice(3)) + 1;
+      const latestIdNum = parseInt(String(latestUser.user_id).slice(6)) + 1;
       console.log(
         "latestIdNum",
         latestIdNum,
-        parseInt(String(latestUser.user_id).slice(3)),
-        latestUser.user_id.slice(3)
+        parseInt(String(latestUser.user_id).slice(6)),
+        latestUser.user_id.slice(6)
       );
       userId = `${rolePrefix}${latestIdNum.toString().padStart(5, "0")}`;
     } else {
@@ -114,6 +114,12 @@ const login = (req, res) => {
         return res
           .status(404)
           .json({ success: false, error: "User not found!" });
+      }
+
+      if (user.status !== 'Approved') {
+        return res
+          .status(404)
+          .json({ success: false, error: "User is not approved!" });
       }
 
       // Check for password match
