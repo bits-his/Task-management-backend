@@ -38,6 +38,7 @@ require('./routes/startups.js')(app);
 require('./routes/excuse.js')(app);
 require('./routes/weekly.js')(app);
 require("./routes/task_form.js")(app);
+require("./routes/stats.js")(app);
 
 //create a server
 var server = app.listen(port, function () {
