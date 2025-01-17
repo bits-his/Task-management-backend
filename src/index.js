@@ -1,4 +1,4 @@
-import express from "express";
+const express = require('express');
 import passport from "passport";
 import bodyParser from "body-parser";
 import cors from "cors";
