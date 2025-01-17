@@ -2,6 +2,10 @@
   "name": "node-express-boilerplate",
   "version": "1.0.0",
   "main": "index.js",
+  "engines": {
+    "node": "18.20.4",
+    "npm": "10.7.0"
+  },
   "scripts": {
     "clean": "rm -rf build && mkdir build",
     "dev": "nodemon --exec babel-node src/index.js",
