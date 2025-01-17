@@ -11,7 +11,10 @@ import validateLoginForm from '../validation/login';
 
 // create user
 const create = async (req, res) => {
-  const { errors, isValid } = validateRegisterForm(req.body);
+  // const { errors, isValid } = validateRegisterForm(req.body);
+  const errors ={};
+  const isValid =true;
+
   let {
     fullname,
     email,
