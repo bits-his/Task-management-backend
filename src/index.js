@@ -3,6 +3,7 @@ const passport = require("passport");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 import models from "./models";
+import 'regenerator-runtime/runtime';
 
 const app = express();
 
