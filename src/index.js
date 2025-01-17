@@ -1,7 +1,7 @@
 const express = require('express');
-import passport from "passport";
-import bodyParser from "body-parser";
-import cors from "cors";
+const passport = require("passport");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 import models from "./models";
 
 const app = express();
