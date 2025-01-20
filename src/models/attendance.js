@@ -11,7 +11,7 @@ export default (sequelize, DataTypes) => {
         type:  DataTypes.STRING(10),
         allowNull: false,
         references: {
-          model: 'Users',
+          model: 'users',
           key: 'user_id',
         },
       },
@@ -67,7 +67,7 @@ export default (sequelize, DataTypes) => {
   );
 
   Attendance.associate = function (models) {
-    Attendance.belongsTo(models.User, {
+    Attendance.belongsTo(models.user, {
       foreignKey: 'user_id',
       as: 'user',
     });
