@@ -1,8 +1,9 @@
-import express from "express";
-import passport from "passport";
-import bodyParser from "body-parser";
-import cors from "cors";
+const express = require('express');
+const passport = require("passport");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 import models from "./models";
+import 'regenerator-runtime/runtime';
 
 const app = express();
 
@@ -39,6 +40,7 @@ require('./routes/excuse.js')(app);
 require('./routes/weekly.js')(app);
 require("./routes/task_form.js")(app);
 require("./routes/stats.js")(app);
+require("./routes/attendance.routes.js")(app);
 
 //create a server
 var server = app.listen(port, function () {
