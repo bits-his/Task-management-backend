@@ -4,7 +4,7 @@ import db from "../models";
 const { Attendance, Users } = models;
 
 const getLocalTime = (date, time) => {
-  // Convert time to local timezone (WAT)
+  
   const [hours, minutes] = time.split(':');
   const localDate = new Date(date);
   localDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
