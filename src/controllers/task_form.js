@@ -2,7 +2,7 @@ import { NULL } from "mysql2/lib/constants/types";
 import db from "../models";
 
 const task_form = (req, res) => {
-  console.log(req.body);
+  // console.log(req);
   const {
     query_type = "create",
     id = NULL,
@@ -19,10 +19,18 @@ const task_form = (req, res) => {
     submitted_at = null,
     tasks = [],
   } = req.body;
+
+      let images = [];
+if (req.files) {
+    images = req.files.map(image => image.path);
+}
+
+        console.log("imagessssssssssssssssssss",images);
+        // console.log(req.files);
   db.sequelize
     .query(
       `call task_form(
-      :query_type,:id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
+      :query_type,:id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at,:images)`,
       {
         replacements: {
           query_type,
@@ -38,6 +46,7 @@ const task_form = (req, res) => {
           created_by,
           startup_id,
           submitted_at,
+          images:`${images}`
         },
       }
     )
@@ -59,13 +68,14 @@ const get_task_form = (req, res) => {
     comment = null,
     created_by = null,
     submitted_at = null,
+    images = []
   } = req.body;
 
   const { query_type = "select", task_id = 0, startup_id = null, } = req.query;
 console.log(req.query)
   db.sequelize
     .query(
-      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
+      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at,:images)`,
       {
         replacements: {
           query_type,
@@ -81,6 +91,7 @@ console.log(req.query)
           created_by,
           startup_id,
           submitted_at,
+          images:"",
         },
       }
     )
@@ -100,11 +111,12 @@ const update_task_status = (req, res) => {
     priority = null,
     status = null,
     assigned_to = null,
+     images = []
   } = req.body;
   console.log(req.body);
   db.sequelize
     .query(
-      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to)`,
+      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:images)`,
       {
         replacements: {
           query_type,
@@ -115,6 +127,8 @@ const update_task_status = (req, res) => {
           priority,
           status,
           assigned_to,
+          images
+
         },
       }
     )
