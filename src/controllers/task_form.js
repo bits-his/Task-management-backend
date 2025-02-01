@@ -31,7 +31,7 @@ const task_form = (req, res) => {
           description,
           due_date,
           priority,
-          status,
+          status: status === "backlog" ? "pending" : status,
           assigned_to,
           rating,
           comment,
@@ -45,7 +45,7 @@ const task_form = (req, res) => {
     .catch((err) => {
       console.log(err);
       res.status(500).json({ success: false });
-    });  
+    });
 };
 const get_task_form = (req, res) => {
   const {
@@ -61,8 +61,8 @@ const get_task_form = (req, res) => {
     submitted_at = null,
   } = req.body;
 
-  const { query_type = "select", task_id = 0, startup_id = null, } = req.query;
-console.log(req.query)
+  const { query_type = "select", task_id = 0, startup_id = null } = req.query;
+  console.log(req.query);
   db.sequelize
     .query(
       `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at)`,
@@ -92,7 +92,6 @@ console.log(req.query)
 };
 const update_task_status = (req, res) => {
   const {
-    query_type = "update",
     task_id = "",
     title = null,
     description = null,
@@ -101,6 +100,7 @@ const update_task_status = (req, res) => {
     status = null,
     assigned_to = null,
   } = req.body;
+  const { query_type = "update" } = req.query;
   console.log(req.body);
   db.sequelize
     .query(
