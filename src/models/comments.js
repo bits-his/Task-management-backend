@@ -37,6 +37,7 @@ export default (sequelize, DataTypes) => {
   Comments.associate = (models) => {
     Comments.belongsTo(models.users, {
       foreignKey: 'user_id',
+      targetKey: 'user_id',
       as: 'users',
     });
   };
