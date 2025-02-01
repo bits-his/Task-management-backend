@@ -41,6 +41,7 @@ require('./routes/weekly.js')(app);
 require("./routes/task_form.js")(app);
 require("./routes/stats.js")(app);
 require("./routes/attendance.routes.js")(app);
+require("./routes/comments.routes.js")(app);
 
 //create a server
 var server = app.listen(port, function () {

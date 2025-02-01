@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import passport from 'passport';
 
 import db from '../models';
-const User = db.user;
+const { users: User } = db;
 
 // load input validation
 import validateRegisterForm from '../validation/register';
