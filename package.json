@@ -27,13 +27,15 @@
     "forever-monitor": "^1.7.1",
     "jsonwebtoken": "^8.5.1",
     "mysql2": "^1.6.5",
+    "nodemailer": "^6.10.0",
     "nodemon": "^3.1.7",
     "passport": "^0.4.0",
     "passport-jwt": "^4.0.0",
     "passport-local": "^1.0.0",
     "regenerator-runtime": "^0.14.1",
     "sequelize": "^5.7.1",
-    "validator": "^10.11.0"
+    "validator": "^10.11.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "eslint-config-prettier": "^4.1.0",
