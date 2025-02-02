@@ -20,13 +20,13 @@ const task_form = (req, res) => {
     tasks = [],
   } = req.body;
 
-      let images = [];
-if (req.files) {
-    images = req.files.map(image => image.path);
-}
+  let images = [];
+  if (req.files) {
+    images = req.files.map((image) => image.path);
+  }
 
-        console.log("imagessssssssssssssssssss",images);
-        // console.log(req.files);
+  console.log("imagessssssssssssssssssss", images);
+  // console.log(req.files);
   db.sequelize
     .query(
       `call task_form(
@@ -46,7 +46,7 @@ if (req.files) {
           created_by,
           startup_id,
           submitted_at,
-          images:`${images}`
+          images: `${images}`,
         },
       }
     )
@@ -54,7 +54,7 @@ if (req.files) {
     .catch((err) => {
       console.log(err);
       res.status(500).json({ success: false });
-    });  
+    });
 };
 const get_task_form = (req, res) => {
   const {
@@ -68,11 +68,11 @@ const get_task_form = (req, res) => {
     comment = null,
     created_by = null,
     submitted_at = null,
-    images = []
+    images = [],
   } = req.body;
 
-  const { query_type = "select", task_id = 0, startup_id = null, } = req.query;
-console.log(req.query)
+  const { query_type = "select", task_id = 0, startup_id = null } = req.query;
+  console.log(req.query);
   db.sequelize
     .query(
       `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at,:images)`,
@@ -91,7 +91,7 @@ console.log(req.query)
           created_by,
           startup_id,
           submitted_at,
-          images:"",
+          images: "",
         },
       }
     )
@@ -111,7 +111,7 @@ const update_task_status = (req, res) => {
     priority = null,
     status = null,
     assigned_to = null,
-     images = []
+    images = [],
   } = req.body;
   console.log(req.body);
   db.sequelize
@@ -127,8 +127,7 @@ const update_task_status = (req, res) => {
           priority,
           status,
           assigned_to,
-          images
-
+          images,
         },
       }
     )

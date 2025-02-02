@@ -12,15 +12,21 @@ import {
   reactivateUser,
   updateUserStartupStatus,
 } from '../controllers/user';
+import { upload } from '../config/multerConfig';
 
 module.exports = (app) => {
   // create a new user
-  app.post(
-    '/api/users/create',
-    // passport.authenticate('jwt', { session: false }),
-    // allowOnly(config.accessLevels.admin, create)
-    create
-  );
+  // app.post(
+  //   '/api/users/create',
+  //   // passport.authenticate('jwt', { session: false }),
+  //   // allowOnly(config.accessLevels.admin, create)
+  //   create
+  // );
+
+  app.post('/api/create_user', upload.fields([
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'ninImage', maxCount: 1 }
+  ]), create);
 
   app.put('/api/users/update/:userId', updateUser);
 

@@ -9,57 +9,37 @@ const User = db.User;
 import validateRegisterForm from '../validation/register';
 import validateLoginForm from '../validation/login';
 
-// create user
 const create = async (req, res) => {
-  // const { errors, isValid } = validateRegisterForm(req.body);
-  const errors ={};
-  const isValid =true;
-
-  let {
-    fullname,
-    email,
-    phone_no,
-    address,
-    password = "123456",
-    role,
-    status,
-    startup_id,
-    starting_date,
-    end_date
-  } = req.body;
-
- 
-  if (!isValid) {
-    return res.status(400).json(errors);
-  }
-
   try {
-    const existingUser = await User.findOne({ where: { email } });
+    const {
+      fullname,
+      email,
+      phone_no,
+      address,
+      password = "123456",
+      role,
+      status,
+      startup_id,
+      starting_date,
+      end_date
+    } = req.body;
+
+    const profileImage = req.files["profileImage"] ? req.files["profileImage"][0].path : null;
+    const ninImage = req.files["ninImage"] ? req.files["ninImage"][0].path : null;
+
+    const existingUser = await db.User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ email: 'Email already exists!' });
     }
 
-    let userId;
-    const rolePrefix = "USR";
+    let rolePrefix = "USR";
 
-    const latestUser = await User.findOne({
-      where: { role },
-      order: [["createdAt", 'DESC']],
-    })
-    console.log(latestUser)
+    const result = await db.sequelize.query("CALL GenerateUserId(:rolePrefix)", {
+      replacements: { rolePrefix },
+    });
 
-    if (latestUser && String(latestUser.user_id).startsWith(rolePrefix)) {
-      const latestIdNum = parseInt(String(latestUser.user_id).slice(6)) + 1;
-      console.log(
-        "latestIdNum",
-        latestIdNum,
-        parseInt(String(latestUser.user_id).slice(6)),
-        latestUser.user_id.slice(6)
-      );
-      userId = `${rolePrefix}${latestIdNum.toString().padStart(5, "0")}`;
-    } else {
-      userId = `${rolePrefix}00001`;
-    }
+    let userId = result[0].userId;
+
     let newUser = {
       user_id: userId,
       fullname,
@@ -71,29 +51,30 @@ const create = async (req, res) => {
       status,
       startup_id,
       starting_date,
-      end_date
+      end_date,
+      nin: ninImage, 
+      profile: profileImage
     };
+
     bcrypt.genSalt(10, async (err, salt) => {
       if (err) throw err;
 
       bcrypt.hash(newUser.password, salt, async (err, hash) => {
         if (err) throw err;
 
-        // Replace the plain password with the hashed password
         newUser.password = hash;
 
         try {
-          // Create the new user in the database
-          const createdUser = await User.create(newUser);
-          return res.json({ user: createdUser });
+          const createdUser = await db.User.create(newUser);
+          return res.json({ success: true, user: createdUser });
         } catch (error) {
           console.error(error);
           return res.status(500).json({ success: false, message: "An error occurred while creating the user." });
         }
       });
     });
-  }
-  catch (err) {
+
+  } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "An error occurred." });
   }

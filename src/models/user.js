@@ -25,12 +25,20 @@ export default (sequelize, DataTypes) => {
       startup_id: DataTypes.STRING,
       starting_date: DataTypes.STRING,
       end_date: DataTypes.STRING,
+      nin: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      profile: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      }
     },
     {}
   );
 
   User.associate = function (models) {
-    // associations go here
+    // Define associations here
   };
 
   return User;
