@@ -37,7 +37,7 @@ const create = async (req, res) => {
       ? req.files["ninImage"][0].path
       : null;
 
-    const existingUser = await db.User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ email: "Email already exists!" });
     }
@@ -52,6 +52,7 @@ const create = async (req, res) => {
     );
 
     let userId = result[0].userId;
+    console.log(result)
 
     let newUser = {
       user_id: userId,
@@ -80,7 +81,7 @@ const create = async (req, res) => {
         newUser.password = hash;
 
         try {
-          const createdUser = await db.User.create(newUser);
+          const createdUser = await User.create(newUser);
           return res.json({ success: true, user: createdUser });
         } catch (error) {
           console.error(error);
@@ -322,7 +323,7 @@ const verifyUserToken = async (req, res) => {
   try {
         const { id } = decoded;
       const user = await User.findOne({where: { id },})
-    
+ 
   if (!user) {
     return res.json({ success: false, message: "user not found" });
      }
@@ -343,7 +344,20 @@ const {
   nin,
   profile,
 } = user.dataValues;
-
+   const [{startup_name}] = await db.sequelize.query(
+      `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
+      {
+        replacements: {
+          query_type :'by_id',
+          startup_id,
+          name: null,
+          description: null,
+          logo: null,
+          created_by:null,
+        },
+      }
+    );
+    console.log((startup_name))
   const attendance = await Attendance.findOne({
     where: { user_id, date },
   });
@@ -363,6 +377,7 @@ const {
     github_link,
     nin,
     profile,
+    startup_name,
     sign: !attendance,
   };
 
