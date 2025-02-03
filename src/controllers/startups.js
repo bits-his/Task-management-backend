@@ -28,10 +28,10 @@ const createStartups = (req, res) => {
       startup_id = null,
       name = null,
       description = null,
-      logo = null,
       created_by = null,
     } = req.body;
-    console.log(req.body);
+       const logo = req.file ? req.file.path : null;
+
     db.sequelize
        .query(
          `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
@@ -55,14 +55,14 @@ const createStartups = (req, res) => {
 }
 const updateStartups = (req, res) => {
        const {
-         query_type = "insert",
+         query_type = "update",
          startup_id = null,
          name = null,
          description = null,
-         logo = null,
          created_by = null,
        } = req.body;
-       console.log(req.body);
+         const logo = req.file ? req.file.path : null;
+
        db.sequelize
          .query(
            `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
@@ -106,4 +106,4 @@ const {startup_id=""}=req.query;
      });
 }
 
-export { findAllStartups, createStartups };
+export { findAllStartups, createStartups, updateStartups };

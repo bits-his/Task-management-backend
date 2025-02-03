@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import passport from "passport";
 
-import db from '../models';
+import db from "../models";
 const models = require("../models");
 const { users: User } = db;
 const { Attendance } = models;
@@ -10,7 +10,6 @@ const { Attendance } = models;
 // load input validation
 import validateRegisterForm from "../validation/register";
 import validateLoginForm from "../validation/login";
-
 
 // create user
 const create = async (req, res) => {
@@ -52,7 +51,7 @@ const create = async (req, res) => {
     );
 
     let userId = result[0].userId;
-    console.log(result)
+    console.log(result);
 
     let newUser = {
       user_id: userId,
@@ -167,8 +166,6 @@ const create = async (req, res) => {
 //     .catch((err) => res.status(500).json({ error: "Server error" }));
 // };
 
-
-
 // fetch all users
 
 const login = async (req, res) => {
@@ -255,6 +252,63 @@ const login = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    console.log("Received user ID:", user_id); // Debugging
+
+    const {
+      fullname,
+      email,
+      phone_no,
+      address,
+      startup_id,
+      linkedin_link,
+      github_link,
+      nin,
+    } = req.body;
+    console.log("Received file:", req.file ? req.file.path : "No file"); // Debugging
+
+    // Ensure the user_id is valid
+    if (!user_id) {
+      return res.status(400).json({ error: "User ID is missing" });
+    }
+
+    // Find user based on the user_id (not using PK)
+    const user = await User.findOne({ where: { user_id } });
+
+    if (!user) {
+      console.error(`User with ID ${user_id} not found`);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get profile picture if uploaded
+    const profilePicture = req.file ? req.file.path : user.profilePicture;
+    console.log(profilePicture)
+
+    // Update user details using the correct field
+    await user.update(
+      {
+        fullname,
+        email,
+        phone_no,
+        address,
+        startup_id,
+        linkedin_link,
+        github_link,
+        nin,
+        profile:profilePicture,
+      },
+      { where: { user_id } }
+    );
+
+    res.status(200).json({ message: "Profile updated successfully", user });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+};
 
 const findAllUsers = (req, res) => {
   User.findAll()
@@ -308,97 +362,104 @@ const verifyUserToken = async (req, res) => {
   const authToken = req.headers["authorization"];
   const token = authToken.split(" ")[1];
   // console.log(token)
-  let decoded
+  let decoded;
   try {
     decoded = await jwt.verify(token, "secret");
-
   } catch (error) {
     console.log(error);
     return res.json({
-        success: false,
-        message: "Failed to authenticate token.",
-        error,
-      });
+      success: false,
+      message: "Failed to authenticate token.",
+      error,
+    });
   }
   try {
-        const { id } = decoded;
-      const user = await User.findOne({where: { id },})
- 
-  if (!user) {
-    return res.json({ success: false, message: "user not found" });
-     }
-      //  Get today's date for attendance
-  const date = new Date().toISOString().split("T")[0];
-const {
-  user_id,
-  fullname,
-  email,
-  phone_no,
-  address,
-  password,
-  role,
-  status,
-  startup_id,
-  linkedin_link,
-  github_link,
-  nin,
-  profile,
-} = user.dataValues;
-   const [{startup_name}] = await db.sequelize.query(
+    const { id } = decoded;
+    const user = await User.findOne({ where: { id } });
+
+    if (!user) {
+      return res.json({ success: false, message: "user not found" });
+    }
+    //  Get today's date for attendance
+    const date = new Date().toISOString().split("T")[0];
+    const {
+      user_id,
+      fullname,
+      email,
+      phone_no,
+      address,
+      password,
+      role,
+      status,
+      startup_id,
+      linkedin_link,
+      github_link,
+      nin,
+      profile,
+    } = user.dataValues;
+    const  startup_name  = await db.sequelize.query(
       `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
       {
         replacements: {
-          query_type :'by_id',
-          startup_id,
+          query_type: "by_id",
+          startup_id : startup_id || 0,
           name: null,
           description: null,
           logo: null,
-          created_by:null,
+          created_by: null,
         },
       }
     );
-    console.log((startup_name))
-  const attendance = await Attendance.findOne({
-    where: { user_id, date },
-  });
-  
-  const payload = {
-    user_id,
-    fullname,
-    email,
-    phone_no,
-    address,
-    password,
-    role,
-    status,
-    startup_id,
-    id,
-    linkedin_link,
-    github_link,
-    nin,
-    profile,
-    startup_name,
-    sign: !attendance,
-  };
+let sta_name = ""
+if(role==="admin"){
+  sta_name= ""
+}else{
+ sta_name= startup_name[0].startup_name;
 
-  res.json({
-    success: true,
-    user: payload,
-  });
-  } catch (error) {
-       res
-          .status(500)
-          .json({ success: false, message: "An error occured", error });
-      };
+}
+    console.log(sta_name);
+    const attendance = await Attendance.findOne({
+      where: { user_id, date },
+    });
+
+    const payload = {
+      user_id,
+      fullname,
+      email,
+      phone_no,
+      address,
+      password,
+      role,
+      status,
+      startup_id,
+      id,
+      linkedin_link,
+      github_link,
+      nin,
+      profile,
+      startup_name :sta_name ||null,
+      sign: !attendance,
+    };
+
   
- 
-    
-      // .catch((err) => {
-      //   console.log(err);
-      //   res
-      //     .status(500)
-      //     .json({ success: false, message: "An error occured", err });
-      // });
+
+    res.json({
+      success: true,
+      user: payload,
+    });
+  } catch (error) {
+    console.log(error)
+    res
+      .status(500)
+      .json({ success: false, message: "An error occured", error });
+  }
+
+  // .catch((err) => {
+  //   console.log(err);
+  //   res
+  //     .status(500)
+  //     .json({ success: false, message: "An error occured", err });
+  // });
   // });
 
   // jwt.verify(token, "secret", (err, decoded) => {
@@ -430,7 +491,6 @@ const {
   //         .json({ success: false, message: "An error occured", err });
   //     });
   // });
-
 };
 
 const updateUser = (req, res) => {
@@ -448,6 +508,7 @@ const UpdateUserStatus = async (req, res) => {
 
   try {
     // Find the user first to make sure they exist
+
     const user = await User.findOne({ where: { id: userId } });
 
     if (!user) {
@@ -458,6 +519,7 @@ const UpdateUserStatus = async (req, res) => {
     }
 
     // Update the user's status
+
     await User.update(
       {
         status,
@@ -468,6 +530,7 @@ const UpdateUserStatus = async (req, res) => {
     );
 
     // Fetch the updated user
+
     const updatedUser = await User.findOne({ where: { id: userId } });
 
     return res.status(200).json({
@@ -621,4 +684,5 @@ export {
   updateUserStatus,
   reactivateUser,
   updateUserStartupStatus,
+  updateProfile,
 };

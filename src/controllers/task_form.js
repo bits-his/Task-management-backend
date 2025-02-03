@@ -59,29 +59,34 @@ console.log('Processed Assigned To:', processedAssignedTo);
       }
     )
     .then((data) => {
-      if (query_type == "create"){
-
+      if (query_type == "create") {
         CreateNotifications(
           "Task",
           assigned_to,
           "Task Created",
           `New task has been assigned to you with a priority of ${priority}`
         );
-      }
-      else if (query_type == "under-review"){
-          CreateNotifications(
-            "Task",
-            created_by,
-            "Task Review",
-            `A task has been submitted to you for review `
-          );
-      } else if (query_type == 'completed'){
-           CreateNotifications(
-             "Task",
-             created_by,
-             "Task Completed",
-             `The Task ${title} has been reviewed and is now completed`
-           );
+      } else if (query_type == "under-review") {
+        CreateNotifications(
+          "Task",
+          created_by,
+          "Task Review",
+          `A task has been submitted to you for review `
+        );
+      } else if (query_type == "completed") {
+        CreateNotifications(
+          "Task",
+          created_by,
+          "Task Completed",
+          `The Task ${title} has been reviewed and is now completed`
+        );
+      } else if (query_type == "reassign") {
+        CreateNotifications(
+          "Task",
+          created_by,
+          "Task Reassigned",
+          `The Task ${title} has been Reassigned to you`
+        );
       }
       res.json({ success: true, data });
     })
