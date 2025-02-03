@@ -1,13 +1,13 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import passport from 'passport';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import passport from "passport";
 
-import db from '../models';
+import db from "../models";
 const User = db.User;
 
 // load input validation
-import validateRegisterForm from '../validation/register';
-import validateLoginForm from '../validation/login';
+import validateRegisterForm from "../validation/register";
+import validateLoginForm from "../validation/login";
 
 const create = async (req, res) => {
   try {
@@ -21,22 +21,31 @@ const create = async (req, res) => {
       status,
       startup_id,
       starting_date,
-      end_date
+      end_date,
+      linkIn_link,
+      git_hub_link,
     } = req.body;
 
-    const profileImage = req.files["profileImage"] ? req.files["profileImage"][0].path : null;
-    const ninImage = req.files["ninImage"] ? req.files["ninImage"][0].path : null;
+    const profileImage = req.files["profileImage"]
+      ? req.files["profileImage"][0].path
+      : null;
+    const ninImage = req.files["ninImage"]
+      ? req.files["ninImage"][0].path
+      : null;
 
     const existingUser = await db.User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ email: 'Email already exists!' });
+      return res.status(400).json({ email: "Email already exists!" });
     }
 
     let rolePrefix = "USR";
 
-    const result = await db.sequelize.query("CALL GenerateUserId(:rolePrefix)", {
-      replacements: { rolePrefix },
-    });
+    const result = await db.sequelize.query(
+      "CALL GenerateUserId(:rolePrefix)",
+      {
+        replacements: { rolePrefix },
+      }
+    );
 
     let userId = result[0].userId;
 
@@ -52,8 +61,10 @@ const create = async (req, res) => {
       startup_id,
       starting_date,
       end_date,
-      nin: ninImage, 
-      profile: profileImage
+      nin: ninImage,
+      profile: profileImage,
+      linkIn_link,
+      git_hub_link,
     };
 
     bcrypt.genSalt(10, async (err, salt) => {
@@ -69,21 +80,24 @@ const create = async (req, res) => {
           return res.json({ success: true, user: createdUser });
         } catch (error) {
           console.error(error);
-          return res.status(500).json({ success: false, message: "An error occurred while creating the user." });
+          return res.status(500).json({
+            success: false,
+            message: "An error occurred while creating the user.",
+          });
         }
       });
     });
-
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ success: false, message: "An error occurred." });
+    return res
+      .status(500)
+      .json({ success: false, message: "An error occurred." });
   }
 };
 
 const login = (req, res) => {
   const { errors, isValid } = validateLoginForm(req.body);
 
-  // Check validation
   if (!isValid) {
     return res.status(400).json(errors);
   }
@@ -100,7 +114,7 @@ const login = (req, res) => {
           .json({ success: false, error: "User not found!" });
       }
 
-      if (user.status !== 'Approved') {
+      if (user.status !== "Approved") {
         return res
           .status(404)
           .json({ success: false, error: "User is not approved!" });
@@ -110,7 +124,7 @@ const login = (req, res) => {
       bcrypt.compare(password, user.password).then((isMatch) => {
         if (isMatch) {
           // Generate JWT token
-          const { id, user_id, fullname, role, phone_no, address, } = user;
+          const { id, user_id, fullname, role, phone_no, address } = user;
           const payload = { id, user_id, fullname, role };
 
           jwt.sign(payload, "secret", { expiresIn: 3600 }, (err, token) => {
@@ -127,8 +141,12 @@ const login = (req, res) => {
                 phone_no,
                 address,
                 password: user.password,
-                startup_id:user.startup_id,
+                startup_id: user.startup_id,
                 role,
+                nin,
+                profile,
+                linkIn_link,
+                git_hub_link,
               },
             });
           });
@@ -145,10 +163,10 @@ const login = (req, res) => {
 // fetch all users
 const findAllUsers = (req, res) => {
   User.findAll()
-    .then(user => {
+    .then((user) => {
       res.json({ user });
     })
-    .catch(err => res.status(500).json({ err }));
+    .catch((err) => res.status(500).json({ err }));
 };
 
 // fetch user by userId
@@ -156,13 +174,13 @@ const findById = (req, res) => {
   const id = req.params.userId;
 
   User.findAll({ where: { id } })
-    .then(user => {
+    .then((user) => {
       if (!user.length) {
-        return res.json({ msg: 'user not found' })
+        return res.json({ msg: "user not found" });
       }
-      res.json({ user })
+      res.json({ user });
     })
-    .catch(err => res.status(500).json({ err }));
+    .catch((err) => res.status(500).json({ err }));
 };
 
 // update a user's info
@@ -178,8 +196,8 @@ const update = (req, res) => {
     },
     { where: { id } }
   )
-    .then(user => res.status(200).json({ user }))
-    .catch(err => res.status(500).json({ err }));
+    .then((user) => res.status(200).json({ user }))
+    .catch((err) => res.status(500).json({ err }));
 };
 
 // delete a user
@@ -187,8 +205,8 @@ const deleteUser = (req, res) => {
   const id = req.params.userId;
 
   User.destroy({ where: { id } })
-    .then(() => res.status.json({ msg: 'User has been deleted successfully!' }))
-    .catch(err => res.status(500).json({ msg: 'Failed to delete!' }));
+    .then(() => res.status.json({ msg: "User has been deleted successfully!" }))
+    .catch((err) => res.status(500).json({ msg: "Failed to delete!" }));
 };
 
 const verifyUserToken = (req, res) => {
@@ -229,10 +247,11 @@ const verifyUserToken = (req, res) => {
 const updateUser = (req, res) => {
   const id = req.params.userId;
   User.update(req.body, { where: { id } })
-    .then(() => res.status(200).json({ msg: 'User has been updated successfully!' }))
-    .catch(err => res.status(500).json({ msg: 'Failed to update!' }));
+    .then(() =>
+      res.status(200).json({ msg: "User has been updated successfully!" })
+    )
+    .catch((err) => res.status(500).json({ msg: "Failed to update!" }));
 };
-
 
 const UpdateUserStatus = async (req, res) => {
   const { userId } = req.params;
@@ -241,20 +260,20 @@ const UpdateUserStatus = async (req, res) => {
   try {
     // Find the user first to make sure they exist
     const user = await User.findOne({ where: { id: userId } });
-    
+
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 
     // Update the user's status
     await User.update(
-      { 
+      {
         status,
         remarks,
-        updated_at: new Date()
+        updated_at: new Date(),
       },
       { where: { id: userId } }
     );
@@ -264,16 +283,15 @@ const UpdateUserStatus = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'User status updated successfully',
-      user: updatedUser
+      message: "User status updated successfully",
+      user: updatedUser,
     });
-
   } catch (error) {
-    console.error('Error updating user status:', error);
+    console.error("Error updating user status:", error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to update user status',
-      error: error.message
+      message: "Failed to update user status",
+      error: error.message,
     });
   }
 };
@@ -283,38 +301,38 @@ const updateUserStatus = async (req, res) => {
   const { status } = req.body;
 
   // Validate status
-  const validStatuses = ['Active', 'Deactivated', 'Suspended'];
+  const validStatuses = ["Active", "Deactivated", "Suspended"];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
-      message: 'Invalid status value'
+      message: "Invalid status value",
     });
   }
 
   try {
     // Find the user first
     const user = await User.findOne({ where: { id: userId } });
-    
+
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 
     // Check if user's status is Approved before allowing status update
-    if (user.status !== 'Approved') {
+    if (user.status !== "Approved") {
       return res.status(403).json({
         success: false,
-        message: 'Cannot update status. User must be Approved first'
+        message: "Cannot update status. User must be Approved first",
       });
     }
 
     // Update user status
     await User.update(
-      { 
+      {
         status,
-        updated_at: new Date()
+        updated_at: new Date(),
       },
       { where: { id: userId } }
     );
@@ -325,15 +343,14 @@ const updateUserStatus = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: `User has been ${status.toLowerCase()} successfully`,
-      user: updatedUser
+      user: updatedUser,
     });
-
   } catch (error) {
-    console.error('Error updating user status:', error);
+    console.error("Error updating user status:", error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to update user status',
-      error: error.message
+      message: "Failed to update user status",
+      error: error.message,
     });
   }
 };
@@ -342,27 +359,27 @@ const updateUserStartupStatus = async (req, res) => {
   const { userId } = req.params;
   const { role, startup, status } = req.body;
 
-  console.log(req.body)
-  console.log(userId)
+  console.log(req.body);
+  console.log(userId);
 
   try {
     // Find the user first to make sure they exist
     const user = await User.findOne({ where: { id: userId } });
-    
+
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 
     // Update the user's information
     await User.update(
-      { 
+      {
         role,
         startup_id: startup,
         status,
-        updated_at: new Date()
+        updated_at: new Date(),
       },
       { where: { id: userId } }
     );
@@ -372,36 +389,34 @@ const updateUserStartupStatus = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'User status and startup updated successfully',
-      data: updatedUser
+      message: "User status and startup updated successfully",
+      data: updatedUser,
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Failed to update user status and startup',
-      error: error.message
+      message: "Failed to update user status and startup",
+      error: error.message,
     });
   }
 };
 
-
-
-export const getJoinUser =  (req, res) => {
-  db.sequelize.query(
-    `CALL select_user()`
-  )
-  .then((data) => res.json({ success: true, data }))
-  .catch((err) => {
-    console.log(err);
-    res.status(500).json({ success: false });
-  });
-}
+export const getJoinUser = (req, res) => {
+  db.sequelize
+    .query(`CALL select_user()`)
+    .then((data) => res.json({ success: true, data }))
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({ success: false });
+    });
+};
 const reactivateUser = (req, res) => {
   const id = req.params.userId;
   User.update(req.body, { where: { id } })
-    .then(() => res.status(200).json({ msg: 'User has been updated successfully!' }))
-    .catch(err => res.status(500).json({ msg: 'Failed to update!' }));
+    .then(() =>
+      res.status(200).json({ msg: "User has been updated successfully!" })
+    )
+    .catch((err) => res.status(500).json({ msg: "Failed to update!" }));
 };
 
 export {
@@ -416,5 +431,5 @@ export {
   UpdateUserStatus,
   updateUserStatus,
   reactivateUser,
-   updateUserStartupStatus
-}
+  updateUserStartupStatus,
+};

@@ -32,6 +32,14 @@ export default (sequelize, DataTypes) => {
       profile: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      linkIn_link: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      git_hub_link: {
+        type: DataTypes.STRING,
+        allowNull: true,
       }
     },
     {}
