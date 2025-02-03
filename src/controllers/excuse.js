@@ -1,4 +1,5 @@
 import db from "../models";
+import { CreateNotifications } from "./Notification";
 
 
 
@@ -13,6 +14,16 @@ create_by,excuse_type,excuse_day,status,excuse_description,approved_by,query_typ
         }
     })
       .then((resp) => {
+        if (query_type == "update") {
+          CreateNotifications(
+            "Excuse",
+            create_by,
+            "Excuse",
+            `Your Excuse ${
+              excuse_description ? excuse_description : excuse_type
+            } has been ${status == 'approved' ? "Approved" : "Rejected" } by ${approved_by} `
+          );
+        }
        res.json({ success: true, data: resp });
      })
      .catch((err) => {

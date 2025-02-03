@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 import models from "./models";
 import 'regenerator-runtime/runtime';
+const webSocketService = require("./services/webSocketService.js");
 
 const app = express();
 
@@ -18,6 +19,8 @@ app.set("view engine", "ejs");
 app.use(express.static(__dirname + "/public"));
 
 app.use(cors());
+const server = require("http").createServer(app);
+webSocketService.init(server);
 
 // force: true will drop the table if it already exits
 // models.sequelize.sync({ force: true }).then(() => {
@@ -41,9 +44,11 @@ require('./routes/weekly.js')(app);
 require("./routes/task_form.js")(app);
 require("./routes/stats.js")(app);
 require("./routes/attendance.routes.js")(app);
+require("./routes/notification.js")(app);
+require("./routes/comments.routes.js")(app);
 
 //create a server
-var server = app.listen(port, function () {
+server.listen(port, function () {
   var host = server.address().address;
   var port = server.address().port;
 

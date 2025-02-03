@@ -1,22 +1,33 @@
 export default (sequelize, DataTypes) => {
   const User = sequelize.define(
-    'User',
+    "users",
     {
+      id: {
+        type: DataTypes.INTEGER(11),
+        primaryKey: true,
+        autoIncrement: true,
+      },
       user_id: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(10),
+        allowNull: false,
         unique: true,
       },
-      fullname: DataTypes.STRING,
+      fullname: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
       email: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(50),
+        allowNull: true,
         unique: true,
       },
       phone_no: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
+        allowNull: true,
         unique: true,
       },
       address: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: true,
       },
       password: DataTypes.STRING,
@@ -33,16 +44,18 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      linkIn_link: {
+      linkedin_link: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      git_hub_link: {
+      github_link: {
         type: DataTypes.STRING,
         allowNull: true,
-      }
+      },
     },
-    {}
+    {
+      timestamps: true, // This will handle createdAt and updatedAt
+    }
   );
 
   User.associate = function (models) {
