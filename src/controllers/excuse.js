@@ -1,4 +1,5 @@
 import db from "../models";
+import { CreateNotifications } from "./Notification";
 
 
 
@@ -13,6 +14,14 @@ create_by,excuse_type,excuse_day,status,excuse_description,approved_by,query_typ
         }
     })
       .then((resp) => {
+        if (query_type == "update") {
+          CreateNotifications(
+            "Excuse",
+            created_by,
+            "Excuse",
+            `A task has been submitted to you for review `
+          );
+        }
        res.json({ success: true, data: resp });
      })
      .catch((err) => {

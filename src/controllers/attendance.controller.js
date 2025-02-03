@@ -14,7 +14,7 @@ const getLocalTime = (date, time) => {
 const signIn = async (req, res) => {
   try {
     const { user_id, timestamp, network_name, ip_address } = req.body;
-    console.log(req.body)
+
     // Validate network
     if (!validateNetwork(network_name, ip_address)) {
       return res.status(403).json({
@@ -48,7 +48,7 @@ const signIn = async (req, res) => {
     
     // Determine status
     const status = sign_in_time <= expected_sign_in_time ? 'present' : 'late';
-
+ console.log(attendance)
     if (!attendance) {
       attendance = await Attendance.create({
         user_id,
@@ -79,6 +79,7 @@ const signIn = async (req, res) => {
       },
     });
   } catch (error) {
+    console.log(error)
     return res.status(500).json({
       success: false,
       error: {

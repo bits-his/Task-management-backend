@@ -1,5 +1,6 @@
 const db = require("../models");
 const WebSocket = require("ws");
+const webSocketService = require("../services/webSocketService");
 
 
 
@@ -148,3 +149,43 @@ console.log(user_id)
         //res.status(500).json({ success: false, err });
       });
 };
+
+module.exports.CreateNotifications = (notif_type,user_id,title,message) => {
+               db.sequelize
+               .query(
+                 `call create_notification(:notif_type,:user_id, :title,:message)`,
+                 {
+                   replacements: {
+                     notif_type,
+                     user_id,
+                     title,
+                     message
+                   },
+                 }
+               )
+               .then((result) => {
+                 console.log(result);
+                 webSocketService.sendNotification(
+                   result,
+                   user_id
+                
+                 );
+                 return result;
+               })
+               .catch((err) => {
+                 console.log(err);
+               });
+};
+
+// module.exports.updateNotifications = (notif_id, status) => {
+
+//                  webSocketService.sendNotification(
+//                    result,
+//                    users,
+//                    notif_key,
+//                    "Pending Releases"
+//                  );
+               
+        
+
+// };

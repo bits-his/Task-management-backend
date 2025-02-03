@@ -3,11 +3,14 @@ import jwt from 'jsonwebtoken';
 import passport from 'passport';
 
 import db from '../models';
-const User = db.User;
+const models = require("../models");
+const { users: User } = db;
+const { Attendance } = models;
 
 // load input validation
 import validateRegisterForm from '../validation/register';
 import validateLoginForm from '../validation/login';
+
 
 // create user
 const create = async (req, res) => {
@@ -99,7 +102,78 @@ const create = async (req, res) => {
   }
 };
 
-const login = (req, res) => {
+// const login = async (req, res) => {
+//   const { errors, isValid } = validateLoginForm(req.body);
+
+//   // Check validation
+//   if (!isValid) {
+//     return res.status(400).json(errors);
+//   }
+
+//   const { email, password } = req.body;
+
+//   User.findOne({
+//     where: { email },
+//   })
+//     .then((user) => {
+//       if (!user) {
+//         return res
+//           .status(404)
+//           .json({ success: false, error: "User not found!" });
+//       }
+
+//       if (user.status !== 'Approved') {
+//         return res
+//           .status(404)
+//           .json({ success: false, error: "User is not approved!" });
+//       }
+
+//       // Check for password match
+//       bcrypt.compare(password, user.password).then((isMatch) => {
+//         if (isMatch) {
+//           // Generate JWT token
+//           const { id, user_id, fullname, role, phone_no, address, } = user;
+//           const payload = { id, user_id, fullname, role };
+//            const date = new Date().toISOString().split("T")[0];
+//     let attendance = await Attendance.findOne({
+//       where: { user_id, date },
+//     });
+//     console.log(attendance)
+//           jwt.sign(payload, "secret", { expiresIn: 3600 }, (err, token) => {
+//             if (err) {
+//               return res.status(500).json({ error: "Token generation failed" });
+//             }
+//             return res.status(200).json({
+//               success: true,
+//               token: `Bearer ${token}`,
+//               user: {
+//                 user_id,
+//                 fullname,
+//                 email: user.email,
+//                 phone_no,
+//                 address,
+//                 password: user.password,
+//                 startup_id:user.startup_id,
+//                 role,
+//                 sign:true,
+//               },
+//             });
+//           });
+//         } else {
+//           return res
+//             .status(400)
+//             .json({ success: false, error: "Incorrect password" });
+//         }
+//       });
+//     })
+//     .catch((err) => res.status(500).json({ error: "Server error" }));
+// };
+
+
+
+// fetch all users
+
+const login = async (req, res) => {
   const { errors, isValid } = validateLoginForm(req.body);
 
   // Check validation
@@ -109,59 +183,66 @@ const login = (req, res) => {
 
   const { email, password } = req.body;
 
-  User.findOne({
-    where: { email },
-  })
-    .then((user) => {
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, error: "User not found!" });
+  try {
+    // Find the user by email
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found!" });
+    }
+
+    if (user.status !== "Approved") {
+      return res
+        .status(404)
+        .json({ success: false, error: "User is not approved!" });
+    }
+
+    // Check for password match
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Incorrect password" });
+    }
+
+    // Generate JWT token
+    const { id, user_id, fullname, role, phone_no, address, startup_id } = user;
+    const payload = { id, user_id, fullname, role };
+
+    // Get today's date for attendance
+    const date = new Date().toISOString().split("T")[0];
+
+    const attendance = await Attendance.findOne({
+      where: { user_id, date },
+    });
+    // Generate JWT token
+    jwt.sign(payload, "secret", { expiresIn: 7200 }, (err, token) => {
+      if (err) {
+        return res.status(500).json({ error: "Token generation failed" });
       }
-
-      if (user.status !== 'Approved') {
-        return res
-          .status(404)
-          .json({ success: false, error: "User is not approved!" });
-      }
-
-      // Check for password match
-      bcrypt.compare(password, user.password).then((isMatch) => {
-        if (isMatch) {
-          // Generate JWT token
-          const { id, user_id, fullname, role, phone_no, address, } = user;
-          const payload = { id, user_id, fullname, role };
-
-          jwt.sign(payload, "secret", { expiresIn: 3600 }, (err, token) => {
-            if (err) {
-              return res.status(500).json({ error: "Token generation failed" });
-            }
-            return res.status(200).json({
-              success: true,
-              token: `Bearer ${token}`,
-              user: {
-                user_id,
-                fullname,
-                email: user.email,
-                phone_no,
-                address,
-                password: user.password,
-                startup_id:user.startup_id,
-                role,
-              },
-            });
-          });
-        } else {
-          return res
-            .status(400)
-            .json({ success: false, error: "Incorrect password" });
-        }
+      return res.status(200).json({
+        success: true,
+        token: `Bearer ${token}`,
+        user: {
+          user_id,
+          fullname,
+          email: user.email,
+          phone_no,
+          address,
+          password: user.password,
+          startup_id,
+          role,
+          sign: !attendance,
+        },
       });
-    })
-    .catch((err) => res.status(500).json({ error: "Server error" }));
+    });
+  } catch (err) {
+    console.error(err); // Log the error for debugging
+    return res.status(500).json({ error: "Server error" });
+  }
 };
 
-// fetch all users
+
 const findAllUsers = (req, res) => {
   User.findAll()
     .then(user => {
@@ -210,39 +291,106 @@ const deleteUser = (req, res) => {
     .catch(err => res.status(500).json({ msg: 'Failed to delete!' }));
 };
 
-const verifyUserToken = (req, res) => {
+const verifyUserToken = async (req, res) => {
   const authToken = req.headers["authorization"];
   const token = authToken.split(" ")[1];
   // console.log(token)
-  jwt.verify(token, "secret", (err, decoded) => {
-    // console.log(decoded)
-    if (err) {
-      return res.json({
+  let decoded
+  try {
+    decoded = await jwt.verify(token, "secret");
+
+  } catch (error) {
+    console.log(error);
+    return res.json({
         success: false,
         message: "Failed to authenticate token.",
-        err,
+        error,
       });
-    }
-    const { id } = decoded;
-    User.findAll({
-      where: { id },
-    })
-      .then((user) => {
-        if (!user.length) {
-          return res.json({ success: false, message: "user not found" });
-        }
-        res.json({
-          success: true,
-          user: user[0],
-        });
-      })
-      .catch((err) => {
-        console.log(err);
-        res
-          .status(500)
-          .json({ success: false, message: "An error occured", err });
-      });
+  }
+  try {
+        const { id } = decoded;
+      const user = await User.findOne({where: { id },})
+    
+  if (!user) {
+    return res.json({ success: false, message: "user not found" });
+     }
+      //  Get today's date for attendance
+  const date = new Date().toISOString().split("T")[0];
+const {
+  user_id,
+  fullname,
+  email,
+  phone_no,
+  address,
+  password,
+  role,
+  status,
+  startup_id,
+} = user.dataValues;
+  const attendance = await Attendance.findOne({
+    where: { user_id, date },
   });
+  
+  const payload = {  user_id,
+  fullname,
+  email,
+  phone_no,
+  address,
+  password,
+  role,
+  status,
+  startup_id,id , sign: !attendance }
+
+  res.json({
+    success: true,
+    user: payload,
+  });
+  } catch (error) {
+       res
+          .status(500)
+          .json({ success: false, message: "An error occured", error });
+      };
+  
+ 
+    
+      // .catch((err) => {
+      //   console.log(err);
+      //   res
+      //     .status(500)
+      //     .json({ success: false, message: "An error occured", err });
+      // });
+  // });
+
+  // jwt.verify(token, "secret", (err, decoded) => {
+  //   // console.log(decoded)
+  //   if (err) {
+  //     return res.json({
+  //       success: false,
+  //       message: "Failed to authenticate token.",
+  //       err,
+  //     });
+  //   }
+  //   const { id } = decoded;
+  //   User.findAll({
+  //     where: { id },
+  //   })
+  //     .then((user) => {
+  //       if (!user.length) {
+  //         return res.json({ success: false, message: "user not found" });
+  //       }
+  //       res.json({
+  //         success: true,
+  //         user: { ...user[0], sign: !attendance },
+  //       });
+  //     })
+  //     .catch((err) => {
+  //       console.log(err);
+  //       res
+  //         .status(500)
+  //         .json({ success: false, message: "An error occured", err });
+  //     });
+  // });
+
 };
 
 const updateUser = (req, res) => {

@@ -76,60 +76,22 @@ class WebSocketService {
         console.log(err);
       });
   }
+  
+sendNotification(notification, userId) {
+    const recipientWs = this.clients[userId];
+    
+    if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+        recipientWs.send(
+            JSON.stringify({
+                type: "notification",
+                notification: notification,  // The notification data
+            })
+        );
+    } else {
+        console.log(`No WebSocket connection for user ${userId}`);
+    }
+}
 
-  sendNotification(notification,ws ) {
-    console.log(notification)
-  //  ws.send(notification)
-//   const subjectFunctions = {
-//     // "Pending Releases": newRelease,
-//     // "": maintenanceNotice,
-//     // "": systemUpdate,
-//   };
-//   users.forEach(user => {
-//     const recipientWs = this.clients[user.username];
-//     if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-//       recipientWs.send(
-//         JSON.stringify({
-//           type: "notification",
-//           notification: notification,
-//         })
-//       );
-//     }else if( users.email !== null ){
-//        const subjectFunction = subjectFunctions[subject];
-//        console.log(subjectFunction)
-//       const emailContent = subjectFunction ? subjectFunction(notif_key) : '';
-      
-//       console.log('email content')
-//       // transport.sendMail(
-//       //   {
-//       //     from: '"KIFMIS" <kifmis-support@brainstorm.ng>',
-//       //     to: user.email,
-//       //     subject: `[KIFMIS] ${subject}`,
-//       //     html: emailContent,
-//       //   },
-//       //   (error, info) => {
-//       //     if (error) {
-//       //       console.log("Error sending email:", error);
-//       //       return res.status(500).json({
-//       //         success: false,
-//       //         message: "Email not sent",
-//       //         error,
-//       //       });
-//       //     } else {
-//       //       console.log("Email sent:", info.response);
-//       //       return res.json({
-//       //         success: true,
-//       //         message: "Email sent",
-//       //         info: info.response,
-//       //       });
-//       //     }
-//       //   }
-//       // );
-//     }
-// })
-
-   
-  }
 
   markAsRead(notificationId, ws) {
     db.sequelize
