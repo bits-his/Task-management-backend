@@ -103,7 +103,7 @@ const get_task_form = (req, res) => {
     comment = null,
     created_by = null,
     submitted_at = null,
-    images = []
+    images = [],
   } = req.body;
 
   const { query_type = "select", task_id = 0, startup_id = null } = req.query;
@@ -126,7 +126,7 @@ const get_task_form = (req, res) => {
           created_by,
           startup_id,
           submitted_at,
-          images:"",
+          images: "",
         },
       }
     )
@@ -145,7 +145,7 @@ const update_task_status = (req, res) => {
     priority = null,
     status = null,
     assigned_to = null,
-     images = []
+    images = [],
   } = req.body;
   const { query_type = "update" } = req.query;
   console.log(req.body);
@@ -162,8 +162,7 @@ const update_task_status = (req, res) => {
           priority,
           status,
           assigned_to,
-          images
-
+          images,
         },
       }
     )

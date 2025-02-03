@@ -1,67 +1,65 @@
 export default (sequelize, DataTypes) => {
   const User = sequelize.define(
-    'users',
+    "users",
     {
       id: {
         type: DataTypes.INTEGER(11),
         primaryKey: true,
-        autoIncrement: true
+        autoIncrement: true,
       },
       user_id: {
         type: DataTypes.STRING(10),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       fullname: {
         type: DataTypes.STRING(50),
-        allowNull: true
+        allowNull: true,
       },
       email: {
         type: DataTypes.STRING(50),
         allowNull: true,
-        unique: true
+        unique: true,
       },
       phone_no: {
         type: DataTypes.STRING(20),
         allowNull: true,
-        unique: true
+        unique: true,
       },
       address: {
         type: DataTypes.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
-      password: {
-        type: DataTypes.STRING(100),
-        allowNull: true
+      password: DataTypes.STRING,
+      role: DataTypes.STRING,
+      status: DataTypes.STRING,
+      startup_id: DataTypes.STRING,
+      starting_date: DataTypes.STRING,
+      end_date: DataTypes.STRING,
+      nin: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
-      role: {
-        type: DataTypes.STRING(255),
-        allowNull: true
+      profile: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
-      status: {
-        type: DataTypes.STRING(45),
-        allowNull: true
+      linkedin_link: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
-      startup_id: {
-        type: DataTypes.STRING(50),
-        allowNull: true
+      github_link: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
-      starting_date: {
-        type: DataTypes.STRING(20),
-        allowNull: true
-      },
-      end_date: {
-        type: DataTypes.STRING(20),
-        allowNull: true
-      }
     },
     {
-      timestamps: true // This will handle createdAt and updatedAt
+      timestamps: true, // This will handle createdAt and updatedAt
     }
   );
 
   User.associate = function (models) {
-    // associations go here
+    // Define associations here
   };
 
   return User;
