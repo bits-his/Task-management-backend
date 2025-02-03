@@ -212,9 +212,7 @@ const deleteUser = (req, res) => {
 const verifyUserToken = (req, res) => {
   const authToken = req.headers["authorization"];
   const token = authToken.split(" ")[1];
-  // console.log(token)
   jwt.verify(token, "secret", (err, decoded) => {
-    // console.log(decoded)
     if (err) {
       return res.json({
         success: false,
@@ -259,6 +257,7 @@ const UpdateUserStatus = async (req, res) => {
 
   try {
     // Find the user first to make sure they exist
+    
     const user = await User.findOne({ where: { id: userId } });
 
     if (!user) {
@@ -269,6 +268,7 @@ const UpdateUserStatus = async (req, res) => {
     }
 
     // Update the user's status
+
     await User.update(
       {
         status,
@@ -279,6 +279,7 @@ const UpdateUserStatus = async (req, res) => {
     );
 
     // Fetch the updated user
+
     const updatedUser = await User.findOne({ where: { id: userId } });
 
     return res.status(200).json({
