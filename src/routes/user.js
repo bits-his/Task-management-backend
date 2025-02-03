@@ -11,6 +11,7 @@ import {
   getJoinUser,
   reactivateUser,
   updateUserStartupStatus,
+  updateProfile,
 } from '../controllers/user';
 import { upload } from '../config/multerConfig';
 
@@ -27,6 +28,8 @@ module.exports = (app) => {
     { name: 'profileImage', maxCount: 1 },
     { name: 'ninImage', maxCount: 1 }
   ]), create);
+
+  app.post("/update/:user_id", upload.single("profilePicture"), updateProfile);
 
   app.put('/api/users/update/:userId', updateUser);
 
