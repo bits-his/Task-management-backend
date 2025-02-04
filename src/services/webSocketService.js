@@ -73,9 +73,20 @@ class WebSocketService {
       });
   }
 
-  sendNotification(notification, socket) {
-    // Send the notification to a specific user via their WebSocket connection
-    socket.emit("notification", notification);
+  sendNotification(notification, user_id) {
+    // Check if the user is connected
+    const userSocket = this.clients[user_id];
+
+    // If the user is connected, send the notification to that specific user
+    if (userSocket && userSocket.connected) {
+      userSocket.emit("notification", {
+        type: "sendNotification",
+        notification: notification,
+      });
+      console.log(`Notification sent to user ${user_id}`);
+    } else {
+      console.log(`User ${user_id} is not connected`);
+    }
   }
 
   markAsRead(notificationId, socket) {
