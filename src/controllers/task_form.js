@@ -19,7 +19,7 @@ const task_form = (req, res) => {
     submitted_at = null,
     tasks = [],
   } = req.body;
-
+console.log(req.body)
   let images = [];
   if (req.files) {
     images = req.files.map(image => image.path);

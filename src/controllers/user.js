@@ -263,7 +263,6 @@ const updateProfile = async (req, res) => {
       email,
       phone_no,
       address,
-      startup_id,
       linkedin_link,
       github_link,
       nin,
@@ -292,12 +291,9 @@ const updateProfile = async (req, res) => {
       {
         fullname,
         email,
-        phone_no,
         address,
-        startup_id,
         linkedin_link,
         github_link,
-        nin,
         profile:profilePicture,
       },
       { where: { user_id } }
