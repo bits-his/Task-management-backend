@@ -1,6 +1,6 @@
 import { NULL } from "mysql2/lib/constants/types";
 import db from "../models";
-import { CreateNotifications } from "./Notification";
+import { CreateNotifications } from "./notification";
 
 const task_form = (req, res) => {
   const {
