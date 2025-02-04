@@ -2,7 +2,11 @@ const { Server } = require("socket.io");
 const db = require("../models"); // Make sure to import your models (or database logic)
 const transport = require("../config/nodemailer");
 
-const allowedOrigins = ["http://localhost:5100", "https://task.brainstorm.ng/"];
+const allowedOrigins = [
+  "http://localhost:5100",
+  "https://task.brainstorm.ng/",
+  "https://tasks.brainstorm.ng/",
+];
 class WebSocketService {
   constructor() {
     this.clients = {}; // To store user ID and WebSocket connection

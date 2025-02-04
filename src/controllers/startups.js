@@ -61,6 +61,7 @@ const updateStartups = (req, res) => {
          description = null,
          created_by = null,
        } = req.body;
+       console.log(req.body);
          const logo = req.file ? req.file.path : null;
 
        db.sequelize
@@ -81,7 +82,7 @@ const updateStartups = (req, res) => {
            res.json({
              success: true,
              data: resp,
-             message: "Startup created successfully",
+             message: "Startup updated successfully",
            });
          })
          .catch((err) => {
