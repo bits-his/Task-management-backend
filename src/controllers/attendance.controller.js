@@ -226,6 +226,20 @@ const getAttendanceHistory = async (req, res) => {
   
 };
 
+const checkRouterConnection = async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+
+  try {
+    const response = await fetch("http://192.168.1.1", { signal: controller.signal });
+    clearTimeout(timeout);
+    setIsConnectedToRouter(response.ok);
+  } catch (error) {
+    clearTimeout(timeout);
+    setIsConnectedToRouter(false);
+  }
+};
+
 
 
 module.exports = {
@@ -233,4 +247,5 @@ module.exports = {
   signOut,
   getTodayStatus,
   getAttendanceHistory,
+  checkRouterConnection,
 };
