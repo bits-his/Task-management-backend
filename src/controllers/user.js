@@ -4,8 +4,9 @@ import passport from "passport";
 
 import db from "../models";
 const models = require("../models");
-const { users: User } = db;
+// const { users: User } = db;
 const { Attendance } = models;
+const User = db.User;
 
 // load input validation
 import validateRegisterForm from "../validation/register";
