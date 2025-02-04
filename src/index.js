@@ -18,10 +18,31 @@ app.set("view engine", "ejs");
 // make express look in the public directory for assets (css/js/img)
 app.use(express.static(__dirname + "/public"));
 
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
 const server = require("http").createServer(app);
 const servers = require("http").createServer(app);
-webSocketService.init(servers);
+webSocketService.init(servers,{cors: {
+      origin: (origin, callback) => {
+        
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      methods: ['GET', 'POST'], // Specify allowed methods
+      // credentials: true, // Allow cookies or authentication headers
+    }});
 
 // force: true will drop the table if it already exits
 // models.sequelize.sync({ force: true }).then(() => {
