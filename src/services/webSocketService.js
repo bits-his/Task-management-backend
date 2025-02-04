@@ -2,6 +2,11 @@ const { Server } = require("socket.io");
 const db = require("../models"); // Make sure to import your models (or database logic)
 const transport = require("../config/nodemailer");
 
+const allowedOrigins = [
+  "http://localhost:5100",
+  "https://task.brainstorm.ng/",
+  "https://tasks.brainstorm.ng/",
+];
 class WebSocketService {
   constructor() {
     this.clients = {}; // To store user ID and WebSocket connection
@@ -12,7 +17,21 @@ class WebSocketService {
     // Initialize the Socket.IO server
     this.io = new Server(server, {
       transports: ["websocket"], // Force WebSocket (no polling fallback)
+      cors: {
+        origin: (origin, callback) => {
+          // Allow connections from specific origins
+          if (!origin || allowedOrigins.includes(origin)) {
+            console.log("Connection from:", origin);
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
+        methods: ["GET", "POST"], // Specify allowed methods
+        credentials: true, // Allow credentials (cookies, etc.)
+      },
     });
+
 
     // Handle new WebSocket connections
     this.io.on("connection", (socket) => {
