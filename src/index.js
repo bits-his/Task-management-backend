@@ -18,7 +18,7 @@ app.set("view engine", "ejs");
 // make express look in the public directory for assets (css/js/img)
 app.use(express.static(__dirname + "/public"));
 
-app.use(cors());
+// app.use(cors());
 const server = require("http").createServer(app);
 
 webSocketService.init(server);
