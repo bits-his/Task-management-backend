@@ -217,7 +217,7 @@ const getAttendanceHistory = async (req, res) => {
       error: {
         code: 'SERVER_ERROR',
         message: 'An error occurred while processing your request',
-        details: error.message,
+    
       },
     })
     )
