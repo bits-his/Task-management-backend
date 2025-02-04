@@ -13,24 +13,21 @@ class WebSocketService {
     // Initialize the Socket.IO server
     this.io = new Server(server, {
       transports: ["websocket"], // Force WebSocket (no polling fallback)
-          cors: {
-      origin: (origin, callback) => {
-        
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
+      cors: {
+        origin: (origin, callback) => {
+          // Allow connections from specific origins
+          if (!origin || allowedOrigins.includes(origin)) {
+            console.log("Connection from:", origin);
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
+        methods: ["GET", "POST"], // Specify allowed methods
+        credentials: true, // Allow credentials (cookies, etc.)
       },
-      methods: ['GET', 'POST'], // Specify allowed methods
-    }
-
-      // cors: {
-      //   origin: "https://task.brainstorm.ng/", // Replace with your frontend domain
-      //   methods: ["GET", "POST"],
-      //   allowedHeaders: ["Content-Type"],
-      // },
     });
+
 
     // Handle new WebSocket connections
     this.io.on("connection", (socket) => {

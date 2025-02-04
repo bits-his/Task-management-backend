@@ -76,12 +76,20 @@ models.sequelize.sync().then(() => {
 app.use(passport.initialize());
 app.use(helmet());
 app.use(helmet.xContentTypeOptions());
-
+app.use(helmet.xContentTypeOptions());
 // passport config
 require("./config/passport")(passport);
 
 //default route
-app.get("/", (req, res) => res.send("Hello my World"));
+app.get("/", async (req, res) => {
+  try {
+    res.send("Hello my World");
+  } catch (err) {
+    console.error("Error in default route", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 
 require('./routes/user.js')(app);
 require('./routes/startups.js')(app);
