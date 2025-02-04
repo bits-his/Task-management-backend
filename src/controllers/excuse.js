@@ -1,5 +1,5 @@
 import db from "../models";
-import { CreateNotifications } from "./Notification";
+import { CreateNotifications } from "./notification";
 
 
 
