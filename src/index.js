@@ -5,7 +5,7 @@ const cors = require("cors");
 import models from "./models";
 import 'regenerator-runtime/runtime';
 const webSocketService = require("./services/webSocketService.js");
-
+const helmet =  require("helmet");
 const app = express();
 
 app.use(bodyParser.json());
@@ -20,6 +20,7 @@ app.use(express.static(__dirname + "/public"));
 
 app.use(cors());
 const server = require("http").createServer(app);
+
 webSocketService.init(server);
 
 // force: true will drop the table if it already exits
@@ -30,6 +31,8 @@ models.sequelize.sync().then(() => {
 
 // passport middleware
 app.use(passport.initialize());
+app.use(helmet());
+app.use(helmet.xContentTypeOptions());
 
 // passport config
 require("./config/passport")(passport);
