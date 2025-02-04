@@ -1,108 +1,93 @@
-const WebSocket = require("ws");
-const db = require("../models"); 
+const { Server } = require("socket.io");
+const db = require("../models"); // Make sure to import your models (or database logic)
 const transport = require("../config/nodemailer");
-// const { newRelease } = require("./templates/new-release");
 
 class WebSocketService {
   constructor() {
     this.clients = {}; // To store user ID and WebSocket connection
-    this.wss = null;
+    this.io = null;
   }
 
   init(server) {
-    this.wss = new WebSocket.Server({ server });
+    // Initialize the Socket.IO server
+    this.io = new Server(server, {
+      transports: ["websocket"], // Force WebSocket (no polling fallback)
+    });
 
-    this.wss.on("connection", (ws) => {
+    // Handle new WebSocket connections
+    this.io.on("connection", (socket) => {
       let userId;
-      let startup_id
-      //console.log("New WebSocket connection");
+      let startup_id;
 
-      ws.on("message", (message) => {
+      console.log("a user connected");
+
+      // Listen for messages from clients
+      socket.on("message", (message) => {
         const data = JSON.parse(message.toString());
         const { userId, type } = data;
-        console.log(data)
 
- if (!userId) {
-   console.error("UserId is not defined");
-   return;
- }
+        if (!userId) {
+          console.error("UserId is not defined");
+          return;
+        }
+
         if (type === "connect") {
           startup_id = data.startup_id;
-          //userId = data.userId; // Store the user ID when they connect
-          this.clients[userId] = ws; // Map the user ID to the WebSocket connection
-          console.log(`User connected: ${userId} to the Socket`);
-          console.log(`${Object.keys(this.clients).length} connected `)
-          console.log(`${Object.keys(this.clients)} ` )
+          this.clients[userId] = socket; // Store the socket for this userId
+          console.log(`User connected: ${userId}`);
         } else if (type === "fetchNotifications") {
-          //userId = data.userId;
-          this.fetchNotifications(userId, ws);
+          this.fetchNotifications(userId, socket);
         } else if (type === "sendNotification") {
-
-          this.sendNotification(data.notification,ws);
+          this.sendNotification(data.notification, socket);
         } else if (type === "markAsRead") {
-          this.markAsRead(data.notificationId, ws);
+          this.markAsRead(data.notificationId, socket);
         }
       });
 
-      ws.on("close", () => {
+      // Handle disconnect event
+      socket.on("disconnect", () => {
         if (userId) {
-          delete this.clients[userId]; // Remove the user from the map when they disconnect
-          console.log(`WebSocket connection closed for user ${userId}`);
+          delete this.clients[userId]; // Remove the user when they disconnect
+          console.log(`User disconnected: ${userId}`);
         }
       });
     });
   }
 
-  fetchNotifications(userId, ws) {
-     if (!userId) {
-       console.error("UserId is not defined");
-       return;
-     }
-    //  let username= userId
+  fetchNotifications(userId, socket) {
     db.sequelize
       .query(`call notifications('fetchNotifications', :userId)`, {
         replacements: { userId },
       })
       .then((results) => {
-        ws.send(
-          JSON.stringify({
+        socket.emit(
+          "notifications", // Emit the notifications to the connected user
+          {
             success: true,
-            type: "allNotifications",
             notifications: results,
-          })
+          }
         );
       })
       .catch((err) => {
-        console.log(err);
+        console.error("Error fetching notifications", err);
       });
   }
-  
-sendNotification(notification, userId) {
-    const recipientWs = this.clients[userId];
-    
-    if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-        recipientWs.send(
-            JSON.stringify({
-                type: "notification",
-                notification: notification,  // The notification data
-            })
-        );
-    } else {
-        console.log(`No WebSocket connection for user ${userId}`);
-    }
-}
 
+  sendNotification(notification, socket) {
+    // Send the notification to a specific user via their WebSocket connection
+    socket.emit("notification", notification);
+  }
 
-  markAsRead(notificationId, ws) {
+  markAsRead(notificationId, socket) {
     db.sequelize
-      .query(`call notifications('markAsRead')`, {
+      .query(`call notifications('markAsRead', :notificationId)`, {
         replacements: { notificationId },
       })
       .then(() => {
-        ws.send(JSON.stringify({ type: "readNotification", notificationId }));
+        socket.emit("notificationRead", notificationId);
       })
       .catch((err) => {
-        console.log(err);
+        console.error("Error marking notification as read", err);
       });
   }
 }
