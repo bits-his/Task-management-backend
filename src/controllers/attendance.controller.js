@@ -1,7 +1,8 @@
 const models = require('../models');
 const { validateNetwork } = require('../utils/networkValidator');
 import db from "../models";
-const { Attendance, Users } = models;
+const User = db.users;
+const Attendance = db.attendances;
 
 const getLocalTime = (date, time) => {
   
@@ -217,7 +218,7 @@ const getAttendanceHistory = async (req, res) => {
       error: {
         code: 'SERVER_ERROR',
         message: 'An error occurred while processing your request',
-        details: error.message,
+    
       },
     })
     )

@@ -2,10 +2,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import passport from "passport";
 
-import db from "../models";
-const models = require("../models");
-const { users: User } = db;
-const { Attendance } = models;
+const db = require("../models");
+const User = db.users;
+const Attendance = db.attendances;
+// const { attendance : Attendance } = models;
 
 // load input validation
 import validateRegisterForm from "../validation/register";
