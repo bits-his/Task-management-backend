@@ -1,7 +1,8 @@
 const models = require('../models');
 const { validateNetwork } = require('../utils/networkValidator');
 import db from "../models";
-const { Attendance, Users } = models;
+const User = db.users;
+const Attendance = db.attendances;
 
 const getLocalTime = (date, time) => {
   
