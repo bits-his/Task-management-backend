@@ -200,7 +200,7 @@ const getAttendanceHistory = async (req, res) => {
    db.sequelize.query(
       `CALL GetAttendanceHistory(:user_id, :start_date, :end_date, :role)`,
       {
-        replacements: { user_id, start_date, end_date, role },
+        replacements: { user_id, start_date, end_date, role },1
       }
     ).then((resp)=>
       

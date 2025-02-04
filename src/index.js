@@ -20,7 +20,8 @@ app.use(express.static(__dirname + "/public"));
 
 app.use(cors());
 const server = require("http").createServer(app);
-webSocketService.init(server);
+const servers = require("https").createServer(app);
+webSocketService.init(servers);
 
 // force: true will drop the table if it already exits
 // models.sequelize.sync({ force: true }).then(() => {
