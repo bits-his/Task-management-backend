@@ -6,7 +6,7 @@ const Attendance = db.attendances;
 
 const getLocalTime = (timestamp) => {
   // Convert timestamp to a Date object in UTC
-  const date = new Date(timestamp);
+  const date = new Date();
   
   // Adjust for Nigeria's timezone (UTC+1)
   date.setUTCHours(date.getUTCHours() + 1);
@@ -119,7 +119,7 @@ const signOut = async (req, res) => {
 
     const expected_sign_out_time = getLocalTime(date, process.env.EXPECTED_SIGN_OUT_TIME || '17:00:00');
     const sign_out_time = getLocalTime(timestamp);
-
+console.log(sign_out_time, expected_sign_out_time)
     // Update status if leaving early
     const sign_out_status = sign_out_time < expected_sign_out_time ? 'early_departure' : attendance.status;
 
@@ -137,7 +137,7 @@ const signOut = async (req, res) => {
         sign_in_time: attendance.sign_in_time,
         sign_out_time: attendance.sign_out_time,
         status: attendance.status,
-        message: status === 'early_departure' ? 'Signed out early' : 'Signed out successfully',
+        message: attendance.status === 'early_departure' ? 'Signed out early' : 'Signed out successfully',
       },
     });
   } catch (error) {
