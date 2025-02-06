@@ -60,14 +60,14 @@ const signIn = async (req, res) => {
       attendance = await Attendance.create({
         user_id,
         date,
-        sign_in_time: timestamp,
+        sign_in_time: sign_in_time,
         network_name,
         ip_address,
         status,
       });
     } else {
       attendance = await attendance.update({
-        sign_in_time: timestamp,
+        sign_in_time: sign_in_time,
         network_name,
         ip_address,
         status,
@@ -124,7 +124,7 @@ const signOut = async (req, res) => {
     const sign_out_status = sign_out_time < expected_sign_out_time ? 'early_departure' : attendance.status;
 
     await attendance.update({
-      sign_out_time: timestamp,
+      sign_out_time: sign_out_time,
       sign_out_status,
     });
 
