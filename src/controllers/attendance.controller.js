@@ -34,7 +34,7 @@ const signIn = async (req, res) => {
     }
 
     const date = new Date(timestamp).toISOString().split('T')[0];
-    
+    console.log(date)
     // Check if attendance record exists
     let attendance = await Attendance.findOne({
       where: { user_id, date },
