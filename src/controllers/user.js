@@ -218,6 +218,25 @@ const login = async (req, res) => {
       createdAt,
     } = user;
     const payload = { id, user_id, fullname, role };
+        const startup_name = await db.sequelize.query(
+          `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
+          {
+            replacements: {
+              query_type: "by_id",
+              startup_id: startup_id || 0,
+              name: null,
+              description: null,
+              logo: null,
+              created_by: null,
+            },
+          }
+        );
+        let sta_name = "";
+        if (role === "admin") {
+          sta_name = "";
+        } else {
+          sta_name = startup_name[0].startup_name;
+        }
 
     // Get today's date for attendance
     const date = new Date().toISOString().split("T")[0];
@@ -250,6 +269,7 @@ const login = async (req, res) => {
           functionalities,
           guardian_number,
           createdAt,
+          startup_name: sta_name || null,
           sign: !attendance,
         },
       });
