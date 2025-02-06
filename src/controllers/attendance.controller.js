@@ -4,13 +4,19 @@ import db from "../models";
 const User = db.users;
 const Attendance = db.attendances;
 
-const getLocalTime = (date, time) => {
+const getLocalTime = (timestamp) => {
+  // Convert timestamp to a Date object in UTC
+  const date = new Date(timestamp);
   
-  const [hours, minutes] = time.split(':');
-  const localDate = new Date(date);
-  localDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-  return localDate;
+  // Adjust for Nigeria's timezone (UTC+1)
+  date.setUTCHours(date.getUTCHours() + 1);
+  
+  return date;
 };
+
+
+
+
 
 const signIn = async (req, res) => {
   try {
@@ -44,11 +50,11 @@ const signIn = async (req, res) => {
       });
     }
 
-    const expected_sign_in_time = getLocalTime(date, process.env.EXPECTED_SIGN_IN_TIME || '09:00:00');
-    const sign_in_time = new Date(timestamp);
+    const expected_sign_in_time = getLocalTime(date, process.env.EXPECTED_SIGN_IN_TIME || '09:30:00');
+   const sign_in_time = getLocalTime(timestamp);
     
     // Determine status
-    const status = sign_in_time <= expected_sign_in_time ? 'present' : 'late';
+    const status = sign_in_time <= expected_sign_in_time ? 'on_time' : 'late';
  console.log(attendance)
     if (!attendance) {
       attendance = await Attendance.create({
@@ -112,14 +118,14 @@ const signOut = async (req, res) => {
     }
 
     const expected_sign_out_time = getLocalTime(date, process.env.EXPECTED_SIGN_OUT_TIME || '17:00:00');
-    const sign_out_time = new Date(timestamp);
+    const sign_out_time = getLocalTime(timestamp);
 
     // Update status if leaving early
-    const status = sign_out_time < expected_sign_out_time ? 'early_departure' : attendance.status;
+    const sign_out_status = sign_out_time < expected_sign_out_time ? 'early_departure' : attendance.status;
 
     await attendance.update({
       sign_out_time: timestamp,
-      status,
+      sign_out_status,
     });
 
     return res.status(200).json({

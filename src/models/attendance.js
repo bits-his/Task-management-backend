@@ -38,8 +38,12 @@ export default (sequelize, DataTypes) => {
         defaultValue: '17:00:00',
       },
       status: {
-        type: DataTypes.ENUM('present', 'absent', 'late', 'early_departure'),
+        type: DataTypes.ENUM('present', 'absent', 'late', 'early_departure','on_time'),
         allowNull: false,
+      },
+      sign_out_status:{
+        type: DataTypes.ENUM('present', 'absent', 'late', 'early_departure','on_time'),
+        allowNull: true,
       },
       network_name: {
         type: DataTypes.STRING(100),
