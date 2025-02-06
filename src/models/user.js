@@ -32,16 +32,20 @@ export default (sequelize, DataTypes) => {
       },
       password: DataTypes.STRING,
       role: DataTypes.STRING,
-      status: DataTypes.STRING,
+      status: DataTypes.STRING(45),
       startup_id: DataTypes.STRING,
       starting_date: DataTypes.STRING,
       end_date: DataTypes.STRING,
       nin: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT("long"),
         allowNull: true,
       },
       profile: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+      },
+      guardian_number: {
+        type: DataTypes.STRING(20),
         allowNull: true,
       },
       linkedin_link: {
@@ -50,6 +54,14 @@ export default (sequelize, DataTypes) => {
       },
       github_link: {
         type: DataTypes.STRING,
+        allowNull: true,
+      },
+      access_to: {
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+      },
+      functionalities: {
+        type: DataTypes.TEXT("long"),
         allowNull: true,
       },
     },

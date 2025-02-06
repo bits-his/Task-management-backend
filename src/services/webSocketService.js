@@ -5,7 +5,7 @@ const transport = require("../config/nodemailer");
 const allowedOrigins = [
   "http://localhost:5100",
   "https://task.brainstorm.ng/",
-  "https://tasks.brainstorm.ng/",
+  "wss://task.brainstorm.ng/",
 ];
 class WebSocketService {
   constructor() {

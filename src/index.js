@@ -18,7 +18,7 @@ let port = process.env.PORT || 34567;
 const allowedOrigins = [
   "http://localhost:5100",
   "https://task.brainstorm.ng",
-  "https://tasks.brainstorm.ng",
+  "wss://task.brainstorm.ng/",
 ];
 // set the view engine to ejs
 app.set("view engine", "ejs");
@@ -29,6 +29,7 @@ app.use(express.static(__dirname + "/public"));
 app.use(
   cors({
     origin: (origin, callback) => {
+      console.log("Connection from:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {

@@ -212,6 +212,10 @@ const login = async (req, res) => {
       github_link,
       nin,
       profile,
+      access_to,
+      functionalities,
+      guardian_number,
+      createdAt,
     } = user;
     const payload = { id, user_id, fullname, role };
 
@@ -242,6 +246,10 @@ const login = async (req, res) => {
           profile,
           linkedin_link,
           github_link,
+          access_to,
+          functionalities,
+          guardian_number,
+          createdAt,
           sign: !attendance,
         },
       });
@@ -294,7 +302,9 @@ const updateProfile = async (req, res) => {
         address,
         linkedin_link,
         github_link,
-        profile:profilePicture,
+        phone_no,
+        nin,
+        profile: profilePicture,
       },
       { where: { user_id } }
     );
@@ -392,6 +402,10 @@ const verifyUserToken = async (req, res) => {
       github_link,
       nin,
       profile,
+      access_to,
+      functionalities,
+      guardian_number,
+      createdAt,
     } = user.dataValues;
     const  startup_name  = await db.sequelize.query(
       `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
@@ -433,6 +447,10 @@ if(role==="admin"){
       github_link,
       nin,
       profile,
+      access_to,
+      functionalities,
+      guardian_number,
+      createdAt,
       startup_name :sta_name ||null,
       sign: !attendance,
     };
