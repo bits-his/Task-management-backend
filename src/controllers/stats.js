@@ -51,6 +51,7 @@ export const getStatsAdmin = (req, res) => {
       attendance_rate: totalStats && totalStats['0'] ? totalStats['0'].attendance_rate || "0.00" : "0.00",
       weekly_reports_submitted: totalStats && totalStats['0'] ? totalStats['0'].weekly_reports_submitted || 0 : 0,
       milestones_achieved: totalStats && totalStats['0'] ? totalStats['0'].milestones_achieved || 0 : 0,
+      total_users: totalStats && totalStats['0'] ? totalStats['0'].total_users || 0 : 0,
 
       // Task Status Distribution
       task_status_distribution: transformNumberedObject(taskStatusDist, item => ({
@@ -97,7 +98,7 @@ export const getStatsAdmin = (req, res) => {
       // Attendance Trends
       attendance_trends: transformNumberedObject(attendanceTrends, item => ({
         date: item.date,
-        rate: parseFloat(item.rate).toFixed(2)
+        rate: parseFloat(item.rate)
       })),
 
       // Startup Attendance
