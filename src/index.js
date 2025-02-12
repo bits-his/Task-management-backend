@@ -78,6 +78,7 @@ require("./routes/notification.js")(app);
 require("./routes/comments.routes.js")(app);
 require("./routes/clients.js")(app);
 require("./routes/market.js")(app);
+require("./routes/deals.js")(app);
 
 //create a server
 server.listen(port, function () {
