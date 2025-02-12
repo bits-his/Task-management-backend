@@ -28,7 +28,6 @@ app.use(express.static(__dirname + "/public"));
 app.use(
   cors({
     origin: (origin, callback) => {
-      console.log("Connection from:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -77,6 +76,8 @@ require("./routes/attendance.routes.js")(app);
 require("./routes/notification.js")(app);
 require("./routes/comments.routes.js")(app);
 require("./routes/clients.js")(app);
+require("./routes/tickets.js")(app);
+require("./routes/department.js")(app);
 
 //create a server
 server.listen(port, function () {
