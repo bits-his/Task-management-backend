@@ -79,6 +79,7 @@ require("./routes/comments.routes.js")(app);
 require("./routes/clients.js")(app);
 require("./routes/outreach.js")(app);
 require("./routes/partnerShip.js")(app);
+require("./routes/deals.js")(app);
 
 //create a server
 server.listen(port, function () {
