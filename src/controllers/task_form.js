@@ -19,19 +19,20 @@ const task_form = (req, res) => {
     submitted_at = null,
     tasks = [],
   } = req.body;
-console.log(req.body)
+  console.log(req.body);
   let images = [];
   if (req.files) {
-    images = req.files.map(image => image.path);
+    images = req.files.map((image) => image.path);
   }
 
   // Handle assigned_to as a comma-separated string or NULL
   const processedAssignedTo = Array.isArray(assigned_to)
-    ? assigned_to.filter(Boolean).join(',')
-    : assigned_to ? assigned_to : null;
-    console.log('Assigned To:', assigned_to);
-console.log('Processed Assigned To:', processedAssignedTo);
-
+    ? assigned_to.filter(Boolean).join(",")
+    : assigned_to
+    ? assigned_to
+    : null;
+  console.log("Assigned To:", assigned_to);
+  console.log("Processed Assigned To:", processedAssignedTo);
 
   db.sequelize
     .query(
@@ -48,13 +49,13 @@ console.log('Processed Assigned To:', processedAssignedTo);
           due_date,
           priority,
           status: status === "backlog" ? "pending" : status,
-          assigned_to: processedAssignedTo, 
+          assigned_to: processedAssignedTo,
           rating,
           comment,
           created_by,
           startup_id,
           submitted_at,
-          images: images.join(',') 
+          images: images.join(","),
         },
       }
     )
@@ -91,7 +92,7 @@ console.log('Processed Assigned To:', processedAssignedTo);
       res.json({ success: true, data });
     })
     .catch((err) => {
-      console.error('Error in task_form:', err);
+      console.error("Error in task_form:", err);
       res.status(500).json({ success: false, error: err.message });
     });
 };

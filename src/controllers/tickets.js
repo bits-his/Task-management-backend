@@ -69,5 +69,39 @@ const get_tickets = (req, res) => {
       res.status(500).json({ success: false, error: err.message });
     });
 };
+const update_tickets = (req, res) => {
+  console.log(req.body);
+  const {
+    query_type = "update",
+    ticket_id = null,
+    ticket_name = null,
+    description = null,
+    status = null,
+    priority = null,
+    department = null,
+    user_id = null,
+  } = req.body;
 
-export { tickets, get_tickets };
+  db.sequelize
+    .query(
+      `CALL tickets(:query_type, :ticket_id, :ticket_name, :description, :status, :priority,:department, :user_id)`,
+      {
+        replacements: {
+          query_type,
+          ticket_id,
+          ticket_name,
+          description,
+          status,
+          priority,
+          department,
+          user_id,
+        },
+      }
+    )
+    .then((data) => res.json({ success: true, data }))
+    .catch((err) => {
+      console.error("Error managing contacts:", err);
+      res.status(500).json({ success: false, error: err.message });
+    });
+};
+export { tickets, get_tickets,update_tickets };

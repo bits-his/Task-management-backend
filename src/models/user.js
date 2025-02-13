@@ -35,6 +35,7 @@ export default (sequelize, DataTypes) => {
       status: DataTypes.STRING(45),
       startup_id: DataTypes.STRING,
       org_id: DataTypes.STRING,
+      dept_id: DataTypes.STRING,
       starting_date: DataTypes.STRING,
       end_date: DataTypes.STRING,
       nin: {

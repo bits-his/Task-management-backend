@@ -6,27 +6,26 @@ const department = (req, res) => {
   const {
     query_type = "create",
 
-    ticket_name = null,
-    description = null,
-    status = "",
-    priority = null,
-    department = null,
+    dept_id = null,
+    startup_id = null,
+    department_name = "",
+    org_id = null,
     user_id = null,
+    status = "Active",
   } = req.body;
-  const ticked_id = uuidv4();
+
   db.sequelize
     .query(
-      `CALL tickets(:query_type, :ticked_id, :ticket_name, :description, :status, :priority,:department, :user_id)`,
+      `CALL department(:query_type, :dept_id, :startup_id, :department_name, :org_id, :user_id,:status)`,
       {
         replacements: {
           query_type,
-          ticked_id,
-          ticket_name,
-          description,
-          status,
-          priority,
-          department,
+          dept_id,
+          startup_id,
+          department_name,
+          org_id,
           user_id,
+          status
         },
       }
     )
@@ -37,30 +36,33 @@ const department = (req, res) => {
     });
 };
 const get_department = (req, res) => {
-  const {
-    query_type = "select",
-    ticked_id = null,
-    ticket_name = null,
-    description = null,
-    status = null,
-    priority = null,
-    department = null,
-    user_id = null,
-  } = req.body;
+    const {
+      query_type = "select",
+      org_id = null,
+      startup_id = null,
+    } = req.query;
+   const {
+
+     dept_id = null,
+
+     department_name = "",
+  
+     user_id = null,
+     status = "active",
+   } = req.body;
 
   db.sequelize
     .query(
-      `CALL tickets(:query_type, :ticked_id, :ticket_name, :description, :status, :priority,:department, :user_id)`,
+      `CALL department(:query_type, :dept_id, :startup_id, :department_name, :org_id, :user_id,:status)`,
       {
         replacements: {
           query_type,
-          ticked_id,
-          ticket_name,
-          description,
-          status,
-          priority,
-          department,
+          dept_id,
+          startup_id,
+          department_name,
+          org_id,
           user_id,
+          status,
         },
       }
     )
