@@ -28,7 +28,6 @@ app.use(express.static(__dirname + "/public"));
 app.use(
   cors({
     origin: (origin, callback) => {
-      console.log("Connection from:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -67,6 +66,8 @@ app.get("/", async (req, res) => {
   }
 });
 
+
+
 require("./routes/user.js")(app);
 require("./routes/startups.js")(app);
 require("./routes/excuse.js")(app);
@@ -78,6 +79,8 @@ require("./routes/notification.js")(app);
 require("./routes/comments.routes.js")(app);
 require("./routes/clients.js")(app);
 require("./routes/market.js")(app);
+require("./routes/tickets.js")(app);
+require("./routes/department.js")(app);
 require("./routes/outreach.js")(app);
 require("./routes/partnerShip.js")(app);
 require("./routes/deals.js")(app);
