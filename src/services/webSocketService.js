@@ -21,7 +21,6 @@ class WebSocketService {
         origin: (origin, callback) => {
           // Allow connections from specific origins
           if (!origin || allowedOrigins.includes(origin)) {
-            console.log("Connection from:", origin);
             callback(null, true);
           } else {
             callback(new Error("Not allowed by CORS"));

@@ -16,6 +16,7 @@ app.use(bodyParser.json());
 let port = process.env.PORT || 34567;
 const allowedOrigins = [
   "http://localhost:5100",
+  "http://192.168.1.140:5100",
   "https://task.brainstorm.ng",
   "wss://task.brainstorm.ng/",
 ];
@@ -81,6 +82,7 @@ require("./routes/department.js")(app);
 require("./routes/outreach.js")(app);
 require("./routes/partnerShip.js")(app);
 require("./routes/deals.js")(app);
+require("./routes/pushnotification.js")(app);
 
 //create a server
 server.listen(port, function () {

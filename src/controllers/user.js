@@ -235,7 +235,11 @@ const login = async (req, res) => {
           }
         );
         let sta_name = "";
-        if (role === "admin") {
+        if (
+          startup_id === null ||
+          startup_id === "" ||
+          startup_id === "Not Assigned"
+        ) {
           sta_name = "";
         } else {
           sta_name = startup_name[0].startup_name;
