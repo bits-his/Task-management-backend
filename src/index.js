@@ -16,7 +16,6 @@ app.use(bodyParser.json());
 let port = process.env.PORT || 34567;
 const allowedOrigins = [
   "http://localhost:5100",
-  "http://192.168.1.140:5100",
   "https://task.brainstorm.ng",
   "wss://task.brainstorm.ng/",
 ];
@@ -29,6 +28,7 @@ app.use(express.static(__dirname + "/public"));
 app.use(
   cors({
     origin: (origin, callback) => {
+      console.log("Connection from:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -39,6 +39,7 @@ app.use(
     credentials: true,
   })
 );
+
 const server = require("http").createServer(app);
 
 webSocketService.init(server);
