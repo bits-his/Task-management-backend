@@ -67,6 +67,8 @@ app.get("/", async (req, res) => {
   }
 });
 
+
+
 require("./routes/user.js")(app);
 require("./routes/startups.js")(app);
 require("./routes/excuse.js")(app);
@@ -77,12 +79,14 @@ require("./routes/attendance.routes.js")(app);
 require("./routes/notification.js")(app);
 require("./routes/comments.routes.js")(app);
 require("./routes/clients.js")(app);
+require("./routes/market.js")(app);
 require("./routes/tickets.js")(app);
 require("./routes/department.js")(app);
 require("./routes/outreach.js")(app);
 require("./routes/partnerShip.js")(app);
 require("./routes/deals.js")(app);
 require("./routes/pushnotification.js")(app);
+require("./routes/reciept.js")(app);
 
 //create a server
 server.listen(port, function () {

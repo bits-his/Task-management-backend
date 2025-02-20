@@ -24,7 +24,7 @@ const partnerShip = (req, res) => {
           start_date,
           end_date,
           terms,
-          files: images.splice(0, 5),
+          files: `${images.splice(0, 5)}`,
         },
       }
     )

@@ -12,6 +12,7 @@ import {
   reactivateUser,
   updateUserStartupStatus,
   updateProfile,
+  updatedept,
 } from '../controllers/user';
 import { upload } from '../config/multerConfig';
 
@@ -65,6 +66,13 @@ module.exports = (app) => {
     }),
     allowOnly(config.accessLevels.user, update)
   );
+    app.put(
+      "/api/users/:userId",
+      passport.authenticate("jwt", {
+        session: false,
+      }),
+      allowOnly(config.accessLevels.user, updatedept)
+    );
 
   // delete a user
   app.delete(

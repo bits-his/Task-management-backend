@@ -370,7 +370,7 @@ const findById = (req, res) => {
 
 // update a user's info
 const update = (req, res) => {
-  let { firstname, lastname, HospitalId, role, image } = req.body;
+  let { firstname, lastname, dept_id, role,  } = req.body;
   const id = req.params.userId;
 
   User.update(
@@ -378,6 +378,22 @@ const update = (req, res) => {
       firstname,
       lastname,
       role,
+
+
+    },
+    { where: { id } }
+  )
+    .then((user) => res.status(200).json({ user }))
+    .catch((err) => res.status(500).json({ err }));
+};
+const updatedept = (req, res) => {
+  let { dept_id, role } = req.body;
+  const id = req.params.userId;
+
+  User.update(
+    {
+      role,
+      dept_id,
     },
     { where: { id } }
   )
@@ -543,7 +559,7 @@ if(role==="admin"){
 
 const updateUser = (req, res) => {
   const id = req.params.userId;
-  User.update(req.body, { where: { id } })
+  User.update(req.body, { where: { user_id: id } })
     .then(() =>
       res.status(200).json({ msg: "User has been updated successfully!" })
     )
@@ -733,4 +749,5 @@ export {
   reactivateUser,
   updateUserStartupStatus,
   updateProfile,
+  updatedept,
 };
