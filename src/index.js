@@ -28,6 +28,7 @@ app.use(express.static(__dirname + "/public"));
 app.use(
   cors({
     origin: (origin, callback) => {
+      console.log("Connection from:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -38,6 +39,7 @@ app.use(
     credentials: true,
   })
 );
+
 const server = require("http").createServer(app);
 
 webSocketService.init(server);
@@ -84,6 +86,7 @@ require("./routes/department.js")(app);
 require("./routes/outreach.js")(app);
 require("./routes/partnerShip.js")(app);
 require("./routes/deals.js")(app);
+require("./routes/pushnotification.js")(app);
 require("./routes/reciept.js")(app);
 
 //create a server
