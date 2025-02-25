@@ -87,6 +87,7 @@ require("./routes/deals.js")(app);
 require("./routes/reciept.js")(app);
 
 //create a server
+
 server.listen(port, function () {
   var host = server.address().address;
   var port = server.address().port;

@@ -58,3 +58,58 @@ BEGIN
         SELECT b.name, a.leadID, a.status, a.start_date, a.end_date, a.files, a.terms FROM Partnerships AS a JOIN clients AS b ON LeadID  WHERE a.LeadID =b.id;
     END IF;
 END
+
+
+
+
+
+CREATE TABLE meetings ( 
+  id INT AUTO_INCREMENT PRIMARY KEY, 
+  meeting_title VARCHAR(255) NOT NULL, 
+  meeting_date DATETIME NOT NULL, 
+  meeting_duration TIME NOT NULL, 
+  meeting_location VARCHAR(255) NOT NULL, 
+  LeadID INT NOT NULL, -- Foreign key (Client ID) 
+  meeting_agenda VARCHAR(100) NOT NULL, 
+  priority_level VARCHAR(100) NOT NULL, 
+  reminder_type VARCHAR(300) NOT NULL, 
+  notes TEXT DEFAULT NULL, 
+  image_url LONGTEXT DEFAULT NULL, -- Stores the image as an HTTPS link 
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP 
+);
+
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `scheduleMeetings`(IN `p_query_type` VARCHAR(100), IN `p_meeting_title` VARCHAR(255), IN `p_meeting_date` VARCHAR(255), IN `p_meeting_duration` VARCHAR(255), IN `p_meeting_location` VARCHAR(255), IN `p_LeadID` INT, IN `p_meeting_agenda` VARCHAR(100), IN `p_priority_level` VARCHAR(100), IN `p_reminder_type` VARCHAR(100), IN `p_notes` TEXT, IN `p_image_url` LONGTEXT)
+BEGIN
+    -- Insert into meetings table
+    IF p_query_type = "insert" THEN
+        INSERT INTO meetings (
+            meeting_title, 
+            meeting_date, 
+            meeting_duration, 
+            meeting_location, 
+            LeadID, 
+            meeting_agenda, 
+            priority_level, 
+            reminder_type, 
+            notes, 
+            image_url
+        ) VALUES (
+            p_meeting_title, 
+            p_meeting_date, 
+            p_meeting_duration, 
+            p_meeting_location, 
+            p_LeadID, 
+            p_meeting_agenda, 
+            p_priority_level, 
+            p_reminder_type, 
+            p_notes, 
+            p_image_url
+        );
+	ELSEIF p_query_type ="select" THEN
+    	SELECT * FROM meetings;
+    END IF;
+END$$
+DELIMITER ;
