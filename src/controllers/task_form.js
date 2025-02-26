@@ -1,7 +1,7 @@
 import { NULL } from "mysql2/lib/constants/types";
 import db from "../models";
 import { CreateNotifications } from "./notification";
-
+const moment = require("moment");
 const task_form = (req, res) => {
   const {
     query_type = "create",
@@ -47,7 +47,7 @@ const task_form = (req, res) => {
           id,
           title,
           description,
-          due_date,
+          due_date:moment().format('YYYY-MM-DD HH:mm:ss'),
           priority,
           status: status === "backlog" ? "pending" : status,
           assigned_to: processedAssignedTo,
@@ -57,7 +57,7 @@ const task_form = (req, res) => {
           startup_id,
           submitted_at,
           images: images.join(","),
-          subtasks:subtasks ? subtasks : []
+          subtasks:subtasks ? subtasks : null,
         },
       }
     )
