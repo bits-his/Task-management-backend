@@ -4,14 +4,14 @@ const db = require("../models");
 
 
 // Set your VAPID keys here
-const publicVapidKey = process.env.VAPID_PUBLIC_KEY|| "YOUR_PUBLIC_VAPID_KEY";
-const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "YOUR_PRIVATE_VAPID_KEY";
+// const publicVapidKey = process.env.VAPID_PUBLIC_KEY|| "YOUR_PUBLIC_VAPID_KEY";
+// const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "YOUR_PRIVATE_VAPID_KEY";
 
-webpush.setVapidDetails(
-  "mailto:aii07038713563@gmail.com",
-  publicVapidKey,
-  privateVapidKey
-);
+// webpush.setVapidDetails(
+//   "mailto:aii07038713563@gmail.com",
+//   publicVapidKey,
+//   privateVapidKey
+// );
 
 // Save subscription to MySQL
 const saveSubscription = (subscription) => {

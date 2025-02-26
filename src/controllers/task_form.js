@@ -18,8 +18,9 @@ const task_form = (req, res) => {
     startup_id = null,
     submitted_at = null,
     tasks = [],
+    subtasks=[],
   } = req.body;
-  console.log(req.body);
+  console.log(JSON.stringify(req.body));
   let images = [];
   if (req.files) {
     images = req.files.map((image) => image.path);
@@ -39,7 +40,7 @@ const task_form = (req, res) => {
       `call task_form(
         :query_type, :id, :title, :description, :due_date, 
         :priority, :status, :assigned_to, :rating, :comment, 
-        :created_by, :startup_id, :submitted_at, :images)`,
+        :created_by, :startup_id, :submitted_at, :images,:subtasks)`,
       {
         replacements: {
           query_type,
@@ -56,6 +57,7 @@ const task_form = (req, res) => {
           startup_id,
           submitted_at,
           images: images.join(","),
+          subtasks:subtasks ? subtasks : []
         },
       }
     )
@@ -116,7 +118,7 @@ const get_task_form = (req, res) => {
   console.log(req.query);
   db.sequelize
     .query(
-      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at,:images)`,
+      `call task_form(:query_type,:task_id, :title, :description, :due_date, :priority, :status, :assigned_to,:rating,:comment,:created_by,:startup_id,:submitted_at,:images,:subtasks)`,
       {
         replacements: {
           query_type,
@@ -133,6 +135,7 @@ const get_task_form = (req, res) => {
           startup_id,
           submitted_at,
           images: "",
+          subtasks:null,
         },
       }
     )
@@ -178,4 +181,26 @@ const update_task_status = (req, res) => {
       res.status(500).json({ success: false });
     });
 };
+
+
+export const updateSubTask = (req, res) => {
+
+  const {task_id=0,status=""} = req.query;
+
+  db.sequelize.query(
+    `call update_subtask(:task_id,:status)`,
+    {
+      replacements: {
+        task_id:parseInt(task_id),
+        status,
+      },
+    }
+  )
+    .then((data) => res.json({ success: true, data }))
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({ success: false });
+    });
+
+}
 export { task_form, get_task_form, update_task_status };
