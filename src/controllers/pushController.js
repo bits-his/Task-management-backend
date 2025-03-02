@@ -3,20 +3,13 @@ const webpush = require("web-push");
 const db = require("../models");
 
 // Set your VAPID keys here
-const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "YOUR_PUBLIC_VAPID_KEY";
-const privateVapidKey =
-  process.env.VAPID_PRIVATE_KEY || "YOUR_PRIVATE_VAPID_KEY";
+// const publicVapidKey = process.env.VAPID_PUBLIC_KEY|| "YOUR_PUBLIC_VAPID_KEY";
+// const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "YOUR_PRIVATE_VAPID_KEY";
 
 // webpush.setVapidDetails(
 //   "mailto:aii07038713563@gmail.com",
 //   publicVapidKey,
 //   privateVapidKey
-// );
-
-// webPush.setVapidDetails(
-//   "mailto:your-email@example.com", // Replace with your email
-//   vapidKeys.publicKey,
-//   vapidKeys.privateKey
 // );
 
 // Save subscription to MySQL
