@@ -88,6 +88,7 @@ require("./routes/partnerShip.js")(app);
 require("./routes/deals.js")(app);
 require("./routes/pushnotification.js")(app);
 require("./routes/reciept.js")(app);
+require("./routes/post.js")(app);
 
 //create a server
 
