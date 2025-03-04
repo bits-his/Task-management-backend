@@ -88,8 +88,10 @@ require("./routes/partnerShip.js")(app);
 require("./routes/deals.js")(app);
 require("./routes/pushnotification.js")(app);
 require("./routes/reciept.js")(app);
+require("./routes/post.js")(app);
 
 //create a server
+
 server.listen(port, function () {
   var host = server.address().address;
   var port = server.address().port;
