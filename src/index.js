@@ -28,7 +28,6 @@ app.use(express.static(__dirname + "/public"));
 app.use(
   cors({
     origin: (origin, callback) => {
-      console.log("Connection from:", origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
