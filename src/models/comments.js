@@ -16,7 +16,7 @@ export default (sequelize, DataTypes) => {
         },
       },
       task_id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.TEXT,
         allowNull: false,
       },
       description: {

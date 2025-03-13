@@ -18,7 +18,7 @@ const task_form = (req, res) => {
     startup_id = null,
     submitted_at = null,
     tasks = [],
-    subtasks=[],
+    subtasks = [],
   } = req.body;
   console.log(JSON.stringify(req.body));
   let images = [];
@@ -32,7 +32,7 @@ const task_form = (req, res) => {
     : assigned_to
     ? assigned_to
     : null;
-  console.log("Assigned To:", assigned_to);
+  console.log("Assigned To:", req.body);
   console.log("Processed Assigned To:", processedAssignedTo);
 
   db.sequelize
@@ -47,7 +47,7 @@ const task_form = (req, res) => {
           id,
           title,
           description,
-          due_date:moment().format('YYYY-MM-DD HH:mm:ss'),
+          due_date: moment().format("YYYY-MM-DD HH:mm:ss"),
           priority,
           status: status === "backlog" ? "pending" : status,
           assigned_to: processedAssignedTo,
@@ -57,7 +57,12 @@ const task_form = (req, res) => {
           startup_id,
           submitted_at,
           images: images.join(","),
-          subtasks:subtasks ? subtasks : null,
+          subtasks:
+            query_type === "reassign" ||
+            query_type === "edit-task" ||
+            query_type === "update-status"
+              ? ""
+              : subtasks || null,
         },
       }
     )
@@ -135,7 +140,7 @@ const get_task_form = (req, res) => {
           startup_id,
           submitted_at,
           images: "",
-          subtasks:null,
+          subtasks: null,
         },
       }
     )
@@ -151,7 +156,7 @@ const update_task_status = (req, res) => {
     title = null,
     description = null,
     due_date = null,
-    priority = null,
+    priority = "medium",
     status = null,
     assigned_to = null,
     images = [],
@@ -182,25 +187,54 @@ const update_task_status = (req, res) => {
     });
 };
 
-
 export const updateSubTask = (req, res) => {
+  const {
+    task_id = null,
+    status = "",
+    completedBy = null,
+    query_type = "select",
+  } = req.query;
+  console.log(req.query);
 
-  const {task_id=0,status=""} = req.query;
-
-  db.sequelize.query(
-    `call update_subtask(:task_id,:status)`,
-    {
+  db.sequelize
+    .query(`call update_subtask(:task_id,:status,:completedBy,:query_type)`, {
       replacements: {
-        task_id:parseInt(task_id),
+        task_id,
         status,
+        completedBy,
+        query_type,
       },
-    }
-  )
+    })
     .then((data) => res.json({ success: true, data }))
     .catch((err) => {
       console.log(err);
       res.status(500).json({ success: false });
     });
+};
+export const updateAssignee = (req, res) => {
+  const {
+    task_id = 0,
+    status = "pending",
+    user_id = null,
+    new_assignees = null,
+  } = req.body;
 
-}
+  db.sequelize
+    .query(
+      `call update_task_assignee(:task_id,:user_id,:new_status,:new_assignees)`,
+      {
+        replacements: {
+          task_id,
+          user_id,
+          new_status: status,
+          new_assignees,
+        },
+      }
+    )
+    .then((data) => res.json({ success: true, data }))
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({ success: false });
+    });
+};
 export { task_form, get_task_form, update_task_status };

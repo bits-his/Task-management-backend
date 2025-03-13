@@ -10,11 +10,12 @@ const clients = (req, res) => {
     company = null,
     job_title = null,
     status = "Active",
+    startup_id=""
   } = req.body;
 
   db.sequelize
     .query(
-      `CALL clients(:query_type, :contact_id, :name, :email, :phone, :company,:job_title, :status)`,
+      `CALL clients(:query_type, :contact_id, :name, :email, :phone, :company,:job_title, :status,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -25,6 +26,7 @@ const clients = (req, res) => {
           company,
           job_title,
           status,
+          startup_id
         },
       }
     )
@@ -44,11 +46,14 @@ const get_clients = (req, res) => {
     company = null,
     job_title = null,
     status = "Active",
+    
   } = req.body;
+
+  const {startup_id=""}=req.query
 
   db.sequelize
     .query(
-      `CALL clients(:query_type, :contact_id, :name, :email, :phone, :company,:job_title, :status)`,
+      `CALL clients(:query_type, :contact_id, :name, :email, :phone, :company,:job_title, :status,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -59,6 +64,7 @@ const get_clients = (req, res) => {
           company,
           job_title,
           status,
+          startup_id
         },
       }
     )

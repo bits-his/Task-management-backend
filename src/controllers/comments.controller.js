@@ -68,7 +68,7 @@ const getCommentsByTaskId = async (req, res) => {
         as: 'users',
         attributes: ['user_id', 'fullname', 'email']
       }],
-      order: [['date', 'DESC']],
+      order: [['date', 'ASC']],
       logging: console.log // This will log the actual SQL query
     });
 

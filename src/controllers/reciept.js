@@ -2,20 +2,18 @@ import db from "../models";
 import moment from "moment";
 
 function cleanJSONString(jsonString) {
-    // If input is already an array or object, return it
     if (Array.isArray(jsonString) || (typeof jsonString === 'object' && jsonString !== null)) {
         return jsonString;
     }
 
-    // If input is not a string, convert to string
     const input = String(jsonString);
 
-    // More comprehensive cleaning
+  
     return input
-        .replace(/\\"/g, '"')      // Replace escaped quotes
-        .replace(/^['"]|['"]$/g, '') // Remove surrounding quotes
-        .replace(/\\n/g, '')        // Remove newline characters
-        .replace(/\s+/g, ' ')       // Normalize whitespace
+        .replace(/\\"/g, '"')     
+        .replace(/^['"]|['"]$/g, '') 
+        .replace(/\\n/g, '')     
+        .replace(/\s+/g, ' ')       
         .trim();
 }
 
@@ -59,6 +57,7 @@ export const generateInvoice = (req, res) => {
     status = "pending",
     bank_id = "",
     inv_category = "",
+    startup_id=""
   } = req.body;
 
   // Validate and prepare items
@@ -91,7 +90,8 @@ export const generateInvoice = (req, res) => {
         :note,
         :status,
         :bank_id,
-        :inv_category
+        :inv_category,
+        :startup_id
       )`,
       {
         replacements: {
@@ -100,7 +100,7 @@ export const generateInvoice = (req, res) => {
           client,
           email,
           clientAddress,
-          amount: calculatedAmount,
+          amount: parseFloat(calculatedAmount),
           date_created: moment().format("YYYY-MM-DD HH:mm:ss"),
           invoice_number: 0,
           receipt_no: 0,
@@ -109,6 +109,7 @@ export const generateInvoice = (req, res) => {
           status,
           bank_id,
           inv_category,
+          startup_id
         },
         type: db.sequelize.QueryTypes.RAW,
       }
@@ -174,12 +175,16 @@ export const generateInvoice = (req, res) => {
 };
 export const getInvoice = (req, res) => {
   const { invoice_id } = req.params;
+  const { startup_id } = req.query;
+  console.log(startup_id)
+  
   db.sequelize
     .query(
-      `CALL generate_invoice(:query_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)`,
+      `CALL generate_invoice(:query_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,:startup_id)`,
       {
         replacements: {
           query_type: "getallinvoices",
+            startup_id:startup_id || null,
         },
       }
     )
@@ -190,7 +195,6 @@ export const getInvoice = (req, res) => {
       result.forEach((row) => {
         const invoiceId = row.invoice_id;
 
-        // If invoice is not already in the map, add it
         if (!invoiceMap[invoiceId]) {
           invoiceMap[invoiceId] = {
             invoice_id: row.invoice_id,
@@ -204,11 +208,11 @@ export const getInvoice = (req, res) => {
             receipt_no: row.receipt_no,
             notes: row.notes,
             status: row.status,
-            items: [], // Initialize empty items array
+            items: [],
+          
           };
         }
 
-        // Add item details only if there is an item
         if (row.item_id) {
           invoiceMap[invoiceId].items.push({
             item_id: row.item_id,
@@ -253,7 +257,8 @@ export const getinvoice_by_id = (req, res) => {
         :note,
         :status,
         :bank_id,
-        :in_inv_category
+        :in_inv_category,
+        :startup_id
       )`,
       {
         replacements: {
@@ -270,7 +275,8 @@ export const getinvoice_by_id = (req, res) => {
           note: "",
           status: "",
           bank_id: "",
-          in_inv_category:""
+          in_inv_category:"",
+          startup_id:""
         },
       }
     )
@@ -335,7 +341,8 @@ export const update_status = (req, res) => {
         :note,
         :status,
         :bank_id,
-        ''
+        '',
+        :startup_id
     )`,
       {
         replacements: {
@@ -352,7 +359,8 @@ export const update_status = (req, res) => {
           note: "",
           status,
           bank_id: "",
-          in_inv_category:""
+          in_inv_category:"",
+          startup_id:""
         },
       }
     )
@@ -425,14 +433,13 @@ export const generateinvoice = (req, res) => {
     items = [],
     note = "",
     status = "pending",
+    startup_id=""
   } = req.body;
 
   console.log("Request Body:", req.body);
 
-  // Ensure items are stored as JSON string if needed
   const itemsJSON = JSON.stringify(items);
 
-  // Format the date correctly for MySQL
 
   db.sequelize
     .query(
@@ -447,21 +454,23 @@ export const generateinvoice = (req, res) => {
         :reciept_number,
         :items,
         :note,
-        :status
+        :status,
+        :startup_id
       )`,
       {
         replacements: {
           query_type: "generate",
-          user_id: 0, // Replace with actual user ID if available
+          user_id: 0, 
           client,
           email,
           amount,
           date: new Date(),
-          invoice_number: 0, // Generate a random invoice number
-          reciept_number: 0, // Generate a random receipt number
+          invoice_number: 0, 
+          reciept_number: 0, 
           items: itemsJSON,
           note,
           status,
+          startup_id
         },
       }
     )
