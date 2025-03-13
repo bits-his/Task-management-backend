@@ -285,6 +285,7 @@ const login = async (req, res) => {
           org_id,
           startup_name: sta_name || null,
           sign: !attendance,
+          signout: attendance && attendance.sign_out_time ? true : false
         },
       });
     });
