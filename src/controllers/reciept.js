@@ -1,6 +1,53 @@
 import db from "../models";
 import moment from "moment";
 
+function cleanJSONString(jsonString) {
+    // If input is already an array or object, return it
+    if (Array.isArray(jsonString) || (typeof jsonString === 'object' && jsonString !== null)) {
+        return jsonString;
+    }
+
+    // If input is not a string, convert to string
+    const input = String(jsonString);
+
+    // More comprehensive cleaning
+    return input
+        .replace(/\\"/g, '"')      // Replace escaped quotes
+        .replace(/^['"]|['"]$/g, '') // Remove surrounding quotes
+        .replace(/\\n/g, '')        // Remove newline characters
+        .replace(/\s+/g, ' ')       // Normalize whitespace
+        .trim();
+}
+
+function parseCleanJSON(input) {
+    try {
+        // If already an array, return it
+        if (Array.isArray(input)) return input;
+
+        // If it's an object, convert to array if it looks like one
+        if (typeof input === 'object' && input !== null) {
+            return Array.isArray(Object.values(input)) 
+                ? Object.values(input) 
+                : [input];
+        }
+
+        // Clean the input
+        const cleanedString = cleanJSONString(input);
+
+        // If cleaned string is empty, return empty array
+        if (!cleanedString) return [];
+
+        // Try parsing as JSON
+        const parsed = JSON.parse(cleanedString);
+
+        // Ensure it's an array
+        return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (error) {
+        console.error('Parsing error:', error, 'Input:', input);
+        return [];
+    }
+}
+
 export const generateInvoice = (req, res) => {
   const {
     client = "",
@@ -14,10 +61,19 @@ export const generateInvoice = (req, res) => {
     inv_category = "",
   } = req.body;
 
-  console.log("Received Request:", req.body);
+  // Validate and prepare items
+  const itemsJSON = Array.isArray(items) 
+    ? items.map(item => ({
+        description: String(item.description || '').trim(),
+        quantity: Number(item.quantity || 0),
+        price: Number(item.price || 0)
+      }))
+    : [];
 
-  const itemsJSON = JSON.stringify(items); // Convert items array to JSON
-  const formattedDate = moment().format("YYYY-MM-DD HH:mm:ss");
+  // Calculate total amount if not provided
+  const calculatedAmount = itemsJSON.length > 0 
+    ? itemsJSON.reduce((total, item) => total + (item.quantity * item.price), 0)
+    : amount;
 
   db.sequelize
     .query(
@@ -28,7 +84,7 @@ export const generateInvoice = (req, res) => {
         :email,
         :clientAddress,
         :amount,
-        :date,
+        :date_created,
         :invoice_number,
         :receipt_no,
         :items,
@@ -40,28 +96,80 @@ export const generateInvoice = (req, res) => {
       {
         replacements: {
           query_type: "generate",
-          user_id: 0, // Change if necessary
+          user_id: 0,
           client,
           email,
           clientAddress,
-          amount,
-          date: formattedDate,
+          amount: calculatedAmount,
+          date_created: moment().format("YYYY-MM-DD HH:mm:ss"),
           invoice_number: 0,
           receipt_no: 0,
-          items: itemsJSON,
+          items: JSON.stringify(itemsJSON),
           note,
           status,
           bank_id,
           inv_category,
         },
+        type: db.sequelize.QueryTypes.RAW,
       }
     )
     .then((result) => {
-      res.status(200).json({ success: true, response: result });
+      // Comprehensive logging to understand the result structure
+      console.log('Raw Result:', JSON.stringify(result, null, 2));
+
+      // Multiple approaches to extract invoice ID
+      let invoiceId = null;
+
+      // Approach 1: Check if result is an array with first element
+      if (Array.isArray(result) && result.length > 0) {
+        const firstRow = result[0];
+        
+        // Different possible structures
+        invoiceId = firstRow.invoice_id || 
+                    firstRow.id || 
+                    firstRow.invoiceId || 
+                    (typeof firstRow === 'object' ? Object.values(firstRow)[0] : null);
+      }
+
+      // Approach 2: Flat result case
+      if (!invoiceId && result && typeof result === 'object') {
+        invoiceId = result.invoice_id || 
+                    result.id || 
+                    result.invoiceId;
+      }
+
+      // Logging for debugging
+      console.log('Extracted Invoice ID:', invoiceId);
+
+      if (!invoiceId) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Failed to generate invoice: No invoice ID returned",
+          rawResult: result
+        });
+      }
+
+      res.status(200).json({ 
+        success: true, 
+        invoiceId,
+        message: "Invoice generated successfully"
+      });
     })
     .catch((error) => {
-      console.error("Database Error:", error);
-      res.status(500).json({ success: false, response: error });
+      console.error("Database Error:", {
+        message: error.message,
+        stack: error.stack,
+        result: error.original || error
+      });
+
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate invoice",
+        error: {
+          message: error.message,
+          details: error.toString()
+        }
+      });
     });
 };
 export const getInvoice = (req, res) => {

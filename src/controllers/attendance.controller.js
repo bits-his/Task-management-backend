@@ -3,26 +3,32 @@ const { validateNetwork } = require('../utils/networkValidator');
 import db from "../models";
 const User = db.users;
 const Attendance = db.attendances;
+const SalaryDeduction = db.SalaryDeduction;
 
-const getLocalTime = (timestamp) => {
-  // Convert timestamp to a Date object in UTC
-  const date = new Date();
-  
-  // Adjust for Nigeria's timezone (UTC+1)
-  date.setUTCHours(date.getUTCHours() + 1);
-  
-  return date;
-};
+const moment = require('moment-timezone');
 
+function getLocalTime(date, timeString, timezone = 'Africa/Lagos') {
+  if (!timeString) {
+    console.warn("Warning: timeString is undefined or invalid. Using default time of '09:00:00'");
+    timeString = '09:00:00';
+  }
 
+  const fullDateTime = `${date}T${timeString}`;
 
+  const localTime = moment.tz(fullDateTime, 'YYYY-MM-DDTHH:mm:ss', timezone);
 
+  if (!localTime.isValid()) {
+    console.error("Invalid Date:", fullDateTime); 
+    throw new Error("Invalid sign-in time format");
+  }
+
+  return localTime.format('YYYY-MM-DD HH:mm:ss');
+}
 
 const signIn = async (req, res) => {
   try {
     const { user_id, timestamp, network_name, ip_address } = req.body;
 
-    // Validate network
     if (!validateNetwork(network_name, ip_address)) {
       return res.status(403).json({
         success: false,
@@ -33,12 +39,41 @@ const signIn = async (req, res) => {
       });
     }
 
-    const date = new Date(timestamp).toISOString().split('T')[0];
-    console.log(date)
-    // Check if attendance record exists
-    let attendance = await Attendance.findOne({
-      where: { user_id, date },
-    });
+    const formattedTimestamp = timestamp.replace(' ', 'T'); 
+    if (isNaN(new Date(formattedTimestamp))) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_TIMESTAMP',
+          message: 'The provided timestamp is invalid',
+        },
+      });
+    }
+
+    const date = new Date(formattedTimestamp).toISOString().split('T')[0];  
+
+    const timePart = timestamp.split(' ')[1]+1 || '09:00:00'; 
+
+    const timezone = 'Africa/Lagos';
+
+    const expectedSignInTime = getLocalTime(date, process.env.EXPECTED_SIGN_IN_TIME || '09:30:00', timezone);
+
+    const signInTime = getLocalTime(date, timePart, timezone);
+
+    console.log("Expected sign-in time:", expectedSignInTime);  
+    console.log("Actual sign-in time:", signInTime);  
+
+    const expectedSignIn = moment.tz(expectedSignInTime, 'YYYY-MM-DD HH:mm:ss', timezone); 
+    const actualSignIn = moment.tz(signInTime, 'YYYY-MM-DD HH:mm:ss', timezone); 
+
+    console.log("Expected Date object:", expectedSignIn.format()); // Debug log
+    console.log("Actual Date object:", actualSignIn.format()); // Debug log
+
+    // Determine the status based on sign-in time (on time or late)
+    const status = actualSignIn.isSameOrBefore(expectedSignIn) ? 'on_time' : 'late';
+
+    // Handle attendance logic (same as before)
+    let attendance = await Attendance.findOne({ where: { user_id, date } });
 
     if (attendance && attendance.sign_in_time) {
       return res.status(400).json({
@@ -50,27 +85,35 @@ const signIn = async (req, res) => {
       });
     }
 
-    const expected_sign_in_time = getLocalTime(date, process.env.EXPECTED_SIGN_IN_TIME || '09:30:00');
-   const sign_in_time = getLocalTime(timestamp);
-    
-    // Determine status
-    const status = sign_in_time <= expected_sign_in_time ? 'on_time' : 'late';
- console.log(attendance)
     if (!attendance) {
       attendance = await Attendance.create({
         user_id,
         date,
-        sign_in_time: sign_in_time,
-        network_name,
-        ip_address,
+        sign_in_time: signInTime,
+        expected_sign_in_time: expectedSignInTime,
+        expected_sign_out_time: process.env.EXPECTED_SIGN_OUT_TIME || '17:00:00',  // Default expected sign-out time
         status,
+        ip_address,
+        created_at: new Date(),
+        updated_at: new Date(),
       });
     } else {
       attendance = await attendance.update({
-        sign_in_time: sign_in_time,
-        network_name,
-        ip_address,
+        sign_in_time: signInTime,
+        expected_sign_in_time: expectedSignInTime,
+        expected_sign_out_time: process.env.EXPECTED_SIGN_OUT_TIME || '17:00:00',
         status,
+        ip_address,
+      });
+    }
+
+    // Deduct salary if late
+    if (status === 'late') {
+      await SalaryDeduction.create({
+        user_id,
+        reason: 'Late Sign-In',
+        amount_deducted: 100,
+        date: date,
       });
     }
 
@@ -82,11 +125,11 @@ const signIn = async (req, res) => {
         date: attendance.date,
         sign_in_time: attendance.sign_in_time,
         status: attendance.status,
-        message: status === 'present' ? 'Signed in successfully' : 'Signed in late',
+        message: status === 'on_time' ? 'Signed in successfully' : 'Signed in late',
       },
     });
   } catch (error) {
-    console.log(error)
+    console.error(error);
     return res.status(500).json({
       success: false,
       error: {
@@ -97,6 +140,12 @@ const signIn = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
 
 const signOut = async (req, res) => {
   try {

@@ -29,6 +29,7 @@
     "forever-monitor": "^1.7.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^8.5.1",
+    "moment-timezone": "^0.5.47",
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
     "mysql2": "^1.6.5",
