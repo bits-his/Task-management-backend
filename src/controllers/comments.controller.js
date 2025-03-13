@@ -43,7 +43,7 @@ const createComment = async (req, res) => {
 const getCommentsByTaskId = async (req, res) => {
   try {
     const { task_id } = req.params;
-    console.log("Fetching comments for task_id:", task_id);
+    // console.log("Fetching comments for task_id:", task_id);
 
     if (!task_id) {
       return res.status(400).json({
@@ -98,59 +98,45 @@ const getCommentsByTaskId = async (req, res) => {
   }
 };
 
-const deleteCommentByUserId = async (req, res) => {
+const deleteCommentById = async (req, res) => {
   try {
-    const { user_id } = req.params;
-    console.log("Deleting comments for user:", user_id);
+    const { id } = req.params;
 
-    if (!user_id) {
+    if (!id) {
       return res.status(400).json({
         success: false,
         error: {
           code: "BAD_REQUEST",
-          message: "Missing required parameter: task_id",
+          message: "Missing required parameter: id",
         },
       });
     }
 
-    // First, check if any comments exist for this task
-    const commentCount = await comments.count({
-      where: { task_id },
-    });
-    console.log("Number of comments found:", commentCount);
+    // Check if the comment exists
+    const comment = await comments.findOne({ where: { id } });
 
-    const taskComments = await comments.findAll({
-      where: { task_id },
-      include: [
-        {
-          model: users,
-          as: "users",
-          attributes: ["user_id", "fullname", "email"],
-        },
-      ],
-      order: [["date", "ASC"]],
-      logging: console.log, // This will log the actual SQL query
-    });
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        message: "Comment not found",
+      });
+    }
 
-    console.log("Query results:", JSON.stringify(taskComments, null, 2));
+    // Delete the comment
+    await comments.destroy({ where: { id } });
 
     res.status(200).json({
       success: true,
-      data: taskComments,
-      debug: {
-        commentCount,
-        task_id,
-      },
+      message: "Comment deleted successfully",
     });
   } catch (error) {
-    console.error("Error details:", error);
+    console.error("Error deleting comment:", error);
     res.status(500).json({
       success: false,
       error: {
         code: "SERVER_ERROR",
-        message: "An error occurred while fetching comments",
+        message: "An error occurred while deleting the comment",
         details: error.message,
-        stack: error.stack,
       },
     });
   }
@@ -161,7 +147,7 @@ const updateCommentById = async (req, res) => {
     const { id } = req.params;
     const { description } = req.body;
 
-    console.log(`Updating comment ${id}`);
+    // console.log(`Updating comment ${id}`);
 
     if (!id || !description) {
       return res.status(400).json({
@@ -208,6 +194,6 @@ const updateCommentById = async (req, res) => {
 export {
   createComment,
   getCommentsByTaskId,
-  deleteCommentByUserId,
+  deleteCommentById,
   updateCommentById,
 };
