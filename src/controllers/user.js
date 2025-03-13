@@ -219,10 +219,11 @@ const login = async (req, res) => {
       functionalities,
       guardian_number,
       createdAt,
+
     } = user;
     const payload = { id, user_id, fullname, role };
         const startup_name = await db.sequelize.query(
-          `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
+          `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`,
           {
             replacements: {
               query_type: "by_id",
@@ -231,14 +232,17 @@ const login = async (req, res) => {
               description: null,
               logo: null,
               created_by: null,
+              org_id
             },
           }
         );
         let sta_name = "";
+        console.log(startup_name)
         if (
           startup_id === null ||
           startup_id === "" ||
           startup_id === "Not Assigned"
+          || startup_name.length === 0
         ) {
           sta_name = "";
         } else {
@@ -456,7 +460,7 @@ const verifyUserToken = async (req, res) => {
       createdAt,
     } = user.dataValues;
     const  startup_name  = await db.sequelize.query(
-      `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by)`,
+      `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`,
       {
         replacements: {
           query_type: "by_id",
@@ -465,6 +469,7 @@ const verifyUserToken = async (req, res) => {
           description: null,
           logo: null,
           created_by: null,
+          org_id
         },
       }
     );
