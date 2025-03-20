@@ -129,8 +129,9 @@ export const savePost = (req, res) => {
 
 
 export const getAllPosts = (req, res) => {
+  const {user_id=null}=req.query;
   db.sequelize
-    .query(`CALL get_all_posts()`)
+    .query(`CALL get_all_posts("${user_id}")`)
     .then((resp) => {
       res.json({ success: true, data: resp });
     })

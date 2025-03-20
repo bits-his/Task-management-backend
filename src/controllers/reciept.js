@@ -1,6 +1,51 @@
 import db from "../models";
 import moment from "moment";
 
+function cleanJSONString(jsonString) {
+    if (Array.isArray(jsonString) || (typeof jsonString === 'object' && jsonString !== null)) {
+        return jsonString;
+    }
+
+    const input = String(jsonString);
+
+  
+    return input
+        .replace(/\\"/g, '"')     
+        .replace(/^['"]|['"]$/g, '') 
+        .replace(/\\n/g, '')     
+        .replace(/\s+/g, ' ')       
+        .trim();
+}
+
+function parseCleanJSON(input) {
+    try {
+        // If already an array, return it
+        if (Array.isArray(input)) return input;
+
+        // If it's an object, convert to array if it looks like one
+        if (typeof input === 'object' && input !== null) {
+            return Array.isArray(Object.values(input)) 
+                ? Object.values(input) 
+                : [input];
+        }
+
+        // Clean the input
+        const cleanedString = cleanJSONString(input);
+
+        // If cleaned string is empty, return empty array
+        if (!cleanedString) return [];
+
+        // Try parsing as JSON
+        const parsed = JSON.parse(cleanedString);
+
+        // Ensure it's an array
+        return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (error) {
+        console.error('Parsing error:', error, 'Input:', input);
+        return [];
+    }
+}
+
 export const generateInvoice = (req, res) => {
   const {
     client = "",
@@ -12,12 +57,22 @@ export const generateInvoice = (req, res) => {
     status = "pending",
     bank_id = "",
     inv_category = "",
+    startup_id=""
   } = req.body;
 
-  console.log("Received Request:", req.body);
+  // Validate and prepare items
+  const itemsJSON = Array.isArray(items) 
+    ? items.map(item => ({
+        description: String(item.description || '').trim(),
+        quantity: Number(item.quantity || 0),
+        price: Number(item.price || 0)
+      }))
+    : [];
 
-  const itemsJSON = JSON.stringify(items); // Convert items array to JSON
-  const formattedDate = moment().format("YYYY-MM-DD HH:mm:ss");
+  // Calculate total amount if not provided
+  const calculatedAmount = itemsJSON.length > 0 
+    ? itemsJSON.reduce((total, item) => total + (item.quantity * item.price), 0)
+    : amount;
 
   db.sequelize
     .query(
@@ -28,50 +83,108 @@ export const generateInvoice = (req, res) => {
         :email,
         :clientAddress,
         :amount,
-        :date,
+        :date_created,
         :invoice_number,
         :receipt_no,
         :items,
         :note,
         :status,
         :bank_id,
-        :inv_category
+        :inv_category,
+        :startup_id
       )`,
       {
         replacements: {
           query_type: "generate",
-          user_id: 0, // Change if necessary
+          user_id: 0,
           client,
           email,
           clientAddress,
-          amount,
-          date: formattedDate,
+          amount: parseFloat(calculatedAmount),
+          date_created: moment().format("YYYY-MM-DD HH:mm:ss"),
           invoice_number: 0,
           receipt_no: 0,
-          items: itemsJSON,
+          items: JSON.stringify(itemsJSON),
           note,
           status,
           bank_id,
           inv_category,
+          startup_id
         },
+        type: db.sequelize.QueryTypes.RAW,
       }
     )
     .then((result) => {
-      res.status(200).json({ success: true, response: result });
+      // Comprehensive logging to understand the result structure
+      console.log('Raw Result:', JSON.stringify(result, null, 2));
+
+      // Multiple approaches to extract invoice ID
+      let invoiceId = null;
+
+      // Approach 1: Check if result is an array with first element
+      if (Array.isArray(result) && result.length > 0) {
+        const firstRow = result[0];
+        
+        // Different possible structures
+        invoiceId = firstRow.invoice_id || 
+                    firstRow.id || 
+                    firstRow.invoiceId || 
+                    (typeof firstRow === 'object' ? Object.values(firstRow)[0] : null);
+      }
+
+      // Approach 2: Flat result case
+      if (!invoiceId && result && typeof result === 'object') {
+        invoiceId = result.invoice_id || 
+                    result.id || 
+                    result.invoiceId;
+      }
+
+      // Logging for debugging
+      console.log('Extracted Invoice ID:', invoiceId);
+
+      if (!invoiceId) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Failed to generate invoice: No invoice ID returned",
+          rawResult: result
+        });
+      }
+
+      res.status(200).json({ 
+        success: true, 
+        invoiceId,
+        message: "Invoice generated successfully"
+      });
     })
     .catch((error) => {
-      console.error("Database Error:", error);
-      res.status(500).json({ success: false, response: error });
+      console.error("Database Error:", {
+        message: error.message,
+        stack: error.stack,
+        result: error.original || error
+      });
+
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate invoice",
+        error: {
+          message: error.message,
+          details: error.toString()
+        }
+      });
     });
 };
 export const getInvoice = (req, res) => {
   const { invoice_id } = req.params;
+  const { startup_id } = req.query;
+  console.log(startup_id)
+  
   db.sequelize
     .query(
-      `CALL generate_invoice(:query_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)`,
+      `CALL generate_invoice(:query_type, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,:startup_id)`,
       {
         replacements: {
           query_type: "getallinvoices",
+            startup_id:startup_id || null,
         },
       }
     )
@@ -82,7 +195,6 @@ export const getInvoice = (req, res) => {
       result.forEach((row) => {
         const invoiceId = row.invoice_id;
 
-        // If invoice is not already in the map, add it
         if (!invoiceMap[invoiceId]) {
           invoiceMap[invoiceId] = {
             invoice_id: row.invoice_id,
@@ -96,11 +208,11 @@ export const getInvoice = (req, res) => {
             receipt_no: row.receipt_no,
             notes: row.notes,
             status: row.status,
-            items: [], // Initialize empty items array
+            items: [],
+          
           };
         }
 
-        // Add item details only if there is an item
         if (row.item_id) {
           invoiceMap[invoiceId].items.push({
             item_id: row.item_id,
@@ -145,7 +257,8 @@ export const getinvoice_by_id = (req, res) => {
         :note,
         :status,
         :bank_id,
-        :in_inv_category
+        :in_inv_category,
+        :startup_id
       )`,
       {
         replacements: {
@@ -162,7 +275,8 @@ export const getinvoice_by_id = (req, res) => {
           note: "",
           status: "",
           bank_id: "",
-          in_inv_category:""
+          in_inv_category:"",
+          startup_id:""
         },
       }
     )
@@ -227,7 +341,8 @@ export const update_status = (req, res) => {
         :note,
         :status,
         :bank_id,
-        ''
+        '',
+        :startup_id
     )`,
       {
         replacements: {
@@ -244,7 +359,8 @@ export const update_status = (req, res) => {
           note: "",
           status,
           bank_id: "",
-          in_inv_category:""
+          in_inv_category:"",
+          startup_id:""
         },
       }
     )
@@ -317,14 +433,13 @@ export const generateinvoice = (req, res) => {
     items = [],
     note = "",
     status = "pending",
+    startup_id=""
   } = req.body;
 
   console.log("Request Body:", req.body);
 
-  // Ensure items are stored as JSON string if needed
   const itemsJSON = JSON.stringify(items);
 
-  // Format the date correctly for MySQL
 
   db.sequelize
     .query(
@@ -339,21 +454,23 @@ export const generateinvoice = (req, res) => {
         :reciept_number,
         :items,
         :note,
-        :status
+        :status,
+        :startup_id
       )`,
       {
         replacements: {
           query_type: "generate",
-          user_id: 0, // Replace with actual user ID if available
+          user_id: 0, 
           client,
           email,
           amount,
           date: new Date(),
-          invoice_number: 0, // Generate a random invoice number
-          reciept_number: 0, // Generate a random receipt number
+          invoice_number: 0, 
+          reciept_number: 0, 
           items: itemsJSON,
           note,
           status,
+          startup_id
         },
       }
     )

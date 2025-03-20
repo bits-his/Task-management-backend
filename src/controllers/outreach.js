@@ -9,10 +9,11 @@ const outreach = (req, res) => {
     Outcome = "",
     Notes = "",
     FollowUpDate = "",
+    startup_id=""
   } = req.body;
   db.sequelize
     .query(
-      `CALL outreach(:query_type, :LeadID, :Type, :Date, :Outcome, :Notes,:FollowUpDate)`,
+      `CALL outreach(:query_type, :LeadID, :Type, :Date, :Outcome, :Notes,:FollowUpDate,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -22,6 +23,7 @@ const outreach = (req, res) => {
           Outcome,
           Notes,
           FollowUpDate,
+          startup_id
         },
       }
     )
@@ -41,11 +43,13 @@ const get_outreach = (req, res) => {
     Outcome = "",
     Notes = "",
     FollowUpDate = "",
+
   } = req.body;
+  const {startup_id=""}=req.query
 
   db.sequelize
     .query(
-      `CALL outreach(:query_type, :LeadID, :Type, :Date, :Outcome, :Notes,:FollowUpDate)`,
+      `CALL outreach(:query_type, :LeadID, :Type, :Date, :Outcome, :Notes,:FollowUpDate,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -55,6 +59,7 @@ const get_outreach = (req, res) => {
           Outcome,
           Notes,
           FollowUpDate,
+          startup_id
         },
       }
     )

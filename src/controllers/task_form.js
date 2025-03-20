@@ -49,7 +49,7 @@ const task_form = (req, res) => {
           description,
           due_date,
           priority,
-          status: status === "backlog" ? "pending" : status,
+          status,
           assigned_to: processedAssignedTo,
           rating,
           comment,

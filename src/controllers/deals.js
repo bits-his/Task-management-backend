@@ -16,6 +16,7 @@ const deals = (req, res) => {
     assigned_to = [],
     contract_files = [],
     updated_by = null,
+    startup_id = null,
   } = req.body;
 
   const processedAssignedTo = Array.isArray(assigned_to)
@@ -32,7 +33,7 @@ const deals = (req, res) => {
 
   db.sequelize
     .query(
-      `CALL deals(:query_type, :deal_id, :deal_name, :deal_value, :expected_revenue, :expected_close_date, :priority, :stage, :payment_status, :final_remarks, :client, :assigned_to, :contract_files,:updated_by)`,
+      `CALL deals(:query_type, :deal_id, :deal_name, :deal_value, :expected_revenue, :expected_close_date, :priority, :stage, :payment_status, :final_remarks, :client, :assigned_to, :contract_files,:updated_by,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -49,6 +50,7 @@ const deals = (req, res) => {
           assigned_to: processedAssignedTo,
           contract_files: processedContractFiles,
           updated_by,
+          startup_id,
         },
       }
     )
@@ -74,7 +76,9 @@ const get_deals = (req, res) => {
     assigned_to = [],
     contract_files = [],
     updated_by = null,
+   
   } = req.body;
+  const { startup_id=null}=req.query;
 
   const processedAssignedTo = Array.isArray(assigned_to)
     ? assigned_to.filter(Boolean).join(",")
@@ -90,7 +94,7 @@ const get_deals = (req, res) => {
 
   db.sequelize
     .query(
-      `CALL deals(:query_type, :deal_id, :deal_name, :deal_value, :expected_revenue, :expected_close_date, :priority, :stage, :payment_status, :final_remarks, :client, :assigned_to, :contract_files,:updated_by)`,
+      `CALL deals(:query_type, :deal_id, :deal_name, :deal_value, :expected_revenue, :expected_close_date, :priority, :stage, :payment_status, :final_remarks, :client, :assigned_to, :contract_files,:updated_by,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -107,6 +111,7 @@ const get_deals = (req, res) => {
           assigned_to: processedAssignedTo,
           contract_files: processedContractFiles,
           updated_by,
+          startup_id
         },
       }
     )

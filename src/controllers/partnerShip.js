@@ -8,6 +8,7 @@ const partnerShip = (req, res) => {
     start_date = "",
     end_date = "",
     terms = "",
+    startup_id = "",
   } = req.body;
   let images = [];
   if (req.files) {
@@ -15,7 +16,7 @@ const partnerShip = (req, res) => {
   }
   db.sequelize
     .query(
-      `CALL partnership(:query_type, :LeadID, :status, :start_date, :end_date, :terms, :files)`,
+      `CALL partnership(:query_type, :LeadID, :status, :start_date, :end_date, :terms, :files,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -25,6 +26,7 @@ const partnerShip = (req, res) => {
           end_date,
           terms,
           files: `${images.splice(0, 5)}`,
+          startup_id
         },
       }
     )
@@ -45,13 +47,14 @@ const get_partnerShip = (req, res) => {
     terms = "",
     files = "",
   } = req.body;
+  const {startup_id=null}=req.query;
   let images = [];
   if (req.files) {
     images = req.files.map((image) => image.path);
   }
   db.sequelize
     .query(
-      `CALL partnership(:query_type, :LeadID, :status, :start_date, :end_date, :terms, :files)`,
+      `CALL partnership(:query_type, :LeadID, :status, :start_date, :end_date, :terms, :files,:startup_id)`,
       {
         replacements: {
           query_type,
@@ -60,7 +63,8 @@ const get_partnerShip = (req, res) => {
           start_date,
           end_date,
           terms,
-          files
+          files,
+          startup_id
         },
       }
     )
