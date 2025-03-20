@@ -47,7 +47,7 @@ const task_form = (req, res) => {
           id,
           title,
           description,
-          due_date: moment().format("YYYY-MM-DD HH:mm:ss"),
+          due_date,
           priority,
           status: status === "backlog" ? "pending" : status,
           assigned_to: processedAssignedTo,
