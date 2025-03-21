@@ -1,5 +1,5 @@
 
-const { getNotifications } = require("../controllers/notification");
+const { getNotifications, updateNotifications } = require("../controllers/notification");
 
 module.exports = (app) => {
   app.get(
@@ -7,5 +7,9 @@ module.exports = (app) => {
     
     getNotifications
   );
+    app.post(
+      "/notifications",
+      updateNotifications
+    );
 
 };

@@ -167,7 +167,11 @@ const signOut = async (req, res) => {
     }
 
     const expected_sign_out_time = getLocalTime(date, process.env.EXPECTED_SIGN_OUT_TIME || '17:00:00');
-    const sign_out_time = getLocalTime(timestamp);
+     const timePart = timestamp.split(" ")[1] + 1 || "09:00:00";
+
+     const timezone = "Africa/Lagos";
+
+    const sign_out_time = getLocalTime(timestamp, timePart, timezone);
 console.log(sign_out_time, expected_sign_out_time,'adfghjkjhgfds')
     // Update status if leaving early
     const sign_out_status = sign_out_time < expected_sign_out_time ? 'early_departure' : attendance.status;

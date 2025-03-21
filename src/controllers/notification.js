@@ -21,7 +21,6 @@ module.exports = async function (server) {
         clients[userId] = ws;
         console.log(`New User connected: ${userId}`);
         console.log(Object.keys(clients).length);
-        console.log("aiialpha ")
          ws.send(
            JSON.stringify({
              type: "notification",
@@ -134,12 +133,11 @@ console.log("WebSocket server starte 1d");
 
 module.exports.getNotifications = (req, res) => {
 
-    const { type = "", user_id = "" } = req.query;
+    const { type = "", user_id = "" ,id = ""} = req.query;
 
-console.log(user_id)
     db.sequelize
-      .query(`call notifications(:type, :user_id)`, {
-        replacements: { type, user_id },
+      .query(`call notifications(:type, :user_id,:id)`, {
+        replacements: { type, user_id, id },
       })
       .then((results) => {
         res.json({ success: true, results });
@@ -177,15 +175,19 @@ module.exports.CreateNotifications = (notif_type,user_id,title,message) => {
                });
 };
 
-// module.exports.updateNotifications = (notif_id, status) => {
+module.exports.updateNotifications = (req ,res) => {
+  const { type = "", user_id = "" ,id = "" } = req.query;
 
-//                  webSocketService.sendNotification(
-//                    result,
-//                    users,
-//                    notif_key,
-//                    "Pending Releases"
-//                  );
-               
+       db.sequelize
+         .query(`call notifications(:type, :user_id, :id)`, {
+           replacements: { type, user_id, id },
+         })
+         .then((results) => {
+           res.json({ success: true, results });
+         })
+         .catch((err) => {
+           console.log(err);
+           res.status(500).json({ success: false, err });
+         }); 
         
-
-// };
+};
