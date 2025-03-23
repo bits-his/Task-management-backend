@@ -51,11 +51,12 @@ module.exports = (app) => {
 
   // retrieve user by id
   app.get(
-    '/api/users/:userId',
-    passport.authenticate('jwt', {
-      session: false,
-    }),
-    allowOnly(config.accessLevels.admin, findById)
+    "/api/users/:userId",
+    // passport.authenticate("jwt", {
+    //   session: false,
+    // }),
+    // allowOnly(config.accessLevels.user, findById)
+    findById
   );
 
   // update a user with id

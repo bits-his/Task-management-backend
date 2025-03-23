@@ -47,7 +47,7 @@ const task_form = (req, res) => {
           id,
           title,
           description,
-          due_date : due_date || null,
+          due_date: due_date ? due_date : null,
           priority,
           status,
           assigned_to: processedAssignedTo,
@@ -161,6 +161,7 @@ const update_task_status = (req, res) => {
     assigned_to = null,
     images = [],
   } = req.body;
+  console.log(req.body, req.query)
   const { query_type = "update" } = req.query;
   console.log(req.body);
   db.sequelize

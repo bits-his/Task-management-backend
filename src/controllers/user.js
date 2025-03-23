@@ -255,6 +255,7 @@ const login = async (req, res) => {
     const attendance = await Attendance.findOne({
       where: { user_id, date },
     });
+
     // Generate JWT token
     jwt.sign(payload, "secret", { expiresIn: 7200 }, (err, token) => {
       if (err) {
@@ -284,8 +285,12 @@ const login = async (req, res) => {
           dept_id,
           org_id,
           startup_name: sta_name || null,
-          sign: !attendance,
-          signout: attendance && attendance.sign_out_time ? true : false
+          sign:
+            attendance && attendance.dataValues.sign_in_time !== null
+              ? true
+              : false,
+          signout:
+            attendance && attendance.dataValues.sign_out_time ? true : false,
         },
       });
     });
@@ -363,12 +368,12 @@ const findAllUsers = (req, res) => {
 const findById = (req, res) => {
   const id = req.params.userId;
 
-  User.findAll({ where: { id } })
+  User.findAll({ where: { user_id : id } })
     .then((user) => {
       if (!user.length) {
         return res.json({ msg: "user not found" });
       }
-      res.json({ user });
+      res.json({ success : true ,user });
     })
     .catch((err) => res.status(500).json({ err }));
 };
@@ -482,10 +487,11 @@ if(role==="admin"){
 
 }
     console.log(sta_name);
+
     const attendance = await Attendance.findOne({
       where: { user_id, date },
     });
-
+    // console.log(attendance.dataValues, "adsfdzdsd");
     const payload = {
       user_id,
       fullname,
@@ -508,7 +514,8 @@ if(role==="admin"){
       guardian_number,
       createdAt,
       startup_name: sta_name || null,
-      sign: !attendance,
+      sign: attendance && attendance.dataValues.sign_in_time !== null ? true : false,
+      signout: attendance && attendance.dataValues.sign_out_time !== null ? true : false,
     };
 
   
@@ -565,11 +572,12 @@ if(role==="admin"){
 
 const updateUser = (req, res) => {
   const id = req.params.userId;
+
   User.update(req.body, { where: { user_id: id } })
     .then(() =>
-      res.status(200).json({ msg: "User has been updated successfully!" })
+      res.status(200).json({success: true, msg: "User has been updated successfully!" })
     )
-    .catch((err) => res.status(500).json({ msg: "Failed to update!" }));
+    .catch((err) => res.status(500).json({success: false , msg: "Failed to update!" }));
 };
 
 const UpdateUserStatus = async (req, res) => {
