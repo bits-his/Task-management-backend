@@ -3,9 +3,9 @@ import db from "../models";
 
 const findAllStartups = (req, res) => {
 const {query_type= 'select-all'} = req.query;
-const { startup_id = null ,name = null, description = null, logo = null, created_by = null,org_id = null} = req.body;
+const { startup_id = null ,name = null, description = null, logo = null, created_by = null,org_id = null,department_id = null} = req.body;
    db.sequelize
-     .query(`CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`, {
+     .query(`CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id, :dept_id)`, {
        replacements: {
          query_type,
          startup_id,
@@ -13,7 +13,8 @@ const { startup_id = null ,name = null, description = null, logo = null, created
          description,
          logo,
          created_by,
-         org_id
+         org_id,
+         dept_id: department_id
        },
      })
      .then((resp) => {
@@ -30,13 +31,14 @@ const createStartups = (req, res) => {
       name = null,
       description = null,
       created_by = null,
-      org_id = null
+      org_id = null,
+      department_id = null
     } = req.body;
        const logo = req.file ? req.file.path : null;
 
     db.sequelize
        .query(
-         `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`,
+         `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id, :dept_id)`,
          {
            replacements: {
              query_type,
@@ -45,7 +47,8 @@ const createStartups = (req, res) => {
              description,
              logo,
              created_by,
-             org_id
+             org_id,
+             dept_id: department_id
            },
          }
        )
@@ -63,14 +66,15 @@ const updateStartups = (req, res) => {
          name = null,
          description = null,
          created_by = null,
-         org_id = null
+         org_id = null,
+         department_id = null
        } = req.body;
        console.log(req.body);
          const logo = req.file ? req.file.path : null;
 
        db.sequelize
          .query(
-           `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`,
+           `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id, :dept_id)`,
            {
              replacements: {
                query_type,
@@ -79,7 +83,8 @@ const updateStartups = (req, res) => {
                description,
                logo,
                created_by,
-               org_id
+               org_id,
+               dept_id: department_id
              },
            }
          )

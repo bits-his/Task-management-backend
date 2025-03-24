@@ -72,5 +72,38 @@ const get_department = (req, res) => {
       res.status(500).json({ success: false, error: err.message });
     });
 };
+const get_role = (req, res) => {
+  const { query_type = "roles", org_id = null, startup_id = null } = req.query;
+  const {
 
-export { department, get_department };
+    department_name = "",
+
+    user_id = null,
+    status = "active",
+  } = req.body;
+
+  const {dept_id = null} = req.params;
+
+  db.sequelize
+    .query(
+      `CALL department(:query_type, :dept_id, :startup_id, :department_name, :org_id, :user_id,:status)`,
+      {
+        replacements: {
+          query_type,
+          dept_id,
+          startup_id,
+          department_name,
+          org_id,
+          user_id,
+          status,
+        },
+      }
+    )
+    .then((data) => res.json({ success: true, data }))
+    .catch((err) => {
+      console.error("Error managing contacts:", err);
+      res.status(500).json({ success: false, error: err.message });
+    });
+};
+
+export { department, get_department, get_role };

@@ -223,7 +223,7 @@ const login = async (req, res) => {
     } = user;
     const payload = { id, user_id, fullname, role };
         const startup_name = await db.sequelize.query(
-          `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`,
+          `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id, :dept_id)`,
           {
             replacements: {
               query_type: "by_id",
@@ -232,7 +232,8 @@ const login = async (req, res) => {
               description: null,
               logo: null,
               created_by: null,
-              org_id
+              org_id,
+              dept_id:null
             },
           }
         );
@@ -466,7 +467,7 @@ const verifyUserToken = async (req, res) => {
       createdAt,
     } = user.dataValues;
     const  startup_name  = await db.sequelize.query(
-      `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id)`,
+      `CALL startup(:query_type,:startup_id,:name,:description,:logo,:created_by,:org_id, :dept_id)`,
       {
         replacements: {
           query_type: "by_id",
@@ -475,7 +476,8 @@ const verifyUserToken = async (req, res) => {
           description: null,
           logo: null,
           created_by: null,
-          org_id
+          org_id,
+          dept_id:null
         },
       }
     );
