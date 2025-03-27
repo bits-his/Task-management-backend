@@ -8,7 +8,7 @@ const task_form = (req, res) => {
     id = null,
     title = null,
     description = null,
-    due_date = NULL,
+    due_date = null,
     priority = null,
     status = "pending",
     assigned_to = null,
@@ -18,7 +18,7 @@ const task_form = (req, res) => {
     startup_id = null,
     submitted_at = null,
     tasks = [],
-    subtasks = [],
+    subtasks = null,
   } = req.body;
   console.log(JSON.stringify(req.body));
   let images = [];
@@ -47,7 +47,7 @@ const task_form = (req, res) => {
           id,
           title,
           description,
-          due_date: due_date ? due_date : null,
+          due_date: due_date == 'Invalid date' ? null : due_date ? due_date : null,
           priority,
           status,
           assigned_to: processedAssignedTo,
@@ -61,7 +61,7 @@ const task_form = (req, res) => {
             query_type === "reassign" ||
             query_type === "edit-task" ||
             query_type === "update-status"
-              ? ""
+              ? null
               : subtasks || null,
         },
       }
