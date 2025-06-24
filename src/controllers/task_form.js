@@ -222,7 +222,7 @@ export const updateAssignee = (req, res) => {
 
   db.sequelize
     .query(
-      `call update_task_assignee(:task_id,:user_id,:new_status,:new_assignees)`,
+      `call update_task_and_assignees(:task_id,:user_id,:new_status,:new_assignees)`,
       {
         replacements: {
           task_id,
