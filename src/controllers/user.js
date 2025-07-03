@@ -691,12 +691,14 @@ const updateUserStartupStatus = async (req, res) => {
   const { userId } = req.params;
   const { role, startup, status } = req.body;
 
+  console.log(role, startup, status, userId, "updateUserStartupStatus ");
+
   console.log(req.body);
   console.log(userId);
 
   try {
     // Find the user first to make sure they exist
-    const user = await User.findOne({ where: { id: userId } });
+    const user = await User.findOne({ where: { user_id: userId } });
 
     if (!user) {
       return res.status(404).json({
@@ -713,11 +715,11 @@ const updateUserStartupStatus = async (req, res) => {
         status,
         updated_at: new Date(),
       },
-      { where: { id: userId } }
+      { where: { user_id: userId } }
     );
 
     // Fetch the updated user
-    const updatedUser = await User.findOne({ where: { id: userId } });
+    const updatedUser = await User.findOne({ where: { user_id: userId } });
 
     return res.status(200).json({
       success: true,
