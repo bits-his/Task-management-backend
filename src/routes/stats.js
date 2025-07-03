@@ -19,6 +19,7 @@ module.exports = (app)=>{
           res.status(500).json({ error: 'Failed to fetch status distribution' });
         }
       });
+
       
       // Get priority distribution
       app.get('/api/analytics/priority-distribution', async (req, res) => {
@@ -27,8 +28,7 @@ module.exports = (app)=>{
           const query = `
             SELECT priority, COUNT(*) as count 
             FROM task_form where assigned_to = "${assigned_to}"
-            GROUP BY priority 
-          `;
+            GROUP BY priority`;
           const data = await db.sequelize.query(query);
           res.json(data);
         } catch (error) {
@@ -47,8 +47,7 @@ module.exports = (app)=>{
                    AVG(CASE WHEN rating IS NOT NULL THEN rating ELSE NULL END) as avg_rating
             FROM task_form 
             WHERE assigned_to IS NOT NULL and assigned_to = "${assigned_to}"
-            GROUP BY assigned_to
-          `;
+            GROUP BY assigned_to   `;
           const data = await db.sequelize.query(query);
           res.json(data);
         } catch (error) {
