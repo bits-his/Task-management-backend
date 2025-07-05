@@ -47,7 +47,8 @@ const task_form = (req, res) => {
           id,
           title,
           description,
-          due_date: due_date == 'Invalid date' ? null : due_date ? due_date : null,
+          due_date:
+            due_date == "Invalid date" ? null : due_date ? due_date : null,
           priority,
           status,
           assigned_to: processedAssignedTo,
@@ -161,7 +162,7 @@ const update_task_status = (req, res) => {
     assigned_to = null,
     images = [],
   } = req.body;
-  console.log(req.body, req.query)
+  console.log(req.body, req.query);
   const { query_type = "update" } = req.query;
   console.log(req.body);
   db.sequelize
@@ -218,17 +219,19 @@ export const updateAssignee = (req, res) => {
     status = "pending",
     user_id = null,
     new_assignees = null,
+    rating = null,
   } = req.body;
 
   db.sequelize
     .query(
-      `call update_task_and_assignees(:task_id,:user_id,:new_status,:new_assignees)`,
+      `call update_task_and_assignees(:task_id,:user_id,:new_status,:new_assignees,:rating)`,
       {
         replacements: {
           task_id,
           user_id,
           new_status: status,
           new_assignees,
+          rating,
         },
       }
     )

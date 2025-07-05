@@ -67,7 +67,7 @@ const getCommentsByTaskId = async (req, res) => {
         {
           model: users,
           as: "users",
-          attributes: ["user_id", "fullname", "email"],
+          attributes: ["user_id", "fullname", "email", "profile"],
         },
       ],
       order: [["date", "ASC"]],
