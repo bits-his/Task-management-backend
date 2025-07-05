@@ -30,8 +30,8 @@ const task_form = (req, res) => {
   const processedAssignedTo = Array.isArray(assigned_to)
     ? assigned_to.filter(Boolean).join(",")
     : assigned_to
-    ? assigned_to
-    : null;
+      ? assigned_to
+      : null;
   console.log("Assigned To:", req.body);
   console.log("Processed Assigned To:", processedAssignedTo);
 
@@ -60,8 +60,8 @@ const task_form = (req, res) => {
           images: images.join(","),
           subtasks:
             query_type === "reassign" ||
-            query_type === "edit-task" ||
-            query_type === "update-status"
+              query_type === "edit-task" ||
+              query_type === "update-status"
               ? null
               : subtasks || null,
         },
@@ -231,7 +231,7 @@ export const updateAssignee = (req, res) => {
           user_id,
           new_status: status,
           new_assignees,
-          rating,
+          rating: rating || null,
         },
       }
     )
