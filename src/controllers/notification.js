@@ -1,10 +1,8 @@
-const db = require("../models");
-const WebSocket = require("ws");
-const webSocketService = require("../services/webSocketService");
+import db from "../models/index.js";
+import WebSocket from "ws";
+import webSocketService from "../services/webSocketService.js";
 
-
-
-module.exports = async function (server) {
+export default async function initNotificationWs(server) {
   const wss = new WebSocket.Server({ server });
   const clients = {};
 
@@ -12,47 +10,35 @@ module.exports = async function (server) {
     let userId;
     console.log(`Web Socket Connected`);
 
-    // Fetch all notifications for a user when they connect
     ws.on("message", (message) => {
       const data = JSON.parse(message.toString());
-      const { type } = JSON.parse(message.toString());
+      const { type } = data;
       if (type === "connect") {
-        userId = data.userId; // Store the user ID when they connect
+        userId = data.userId;
         clients[userId] = ws;
         console.log(`New User connected: ${userId}`);
-        console.log(Object.keys(clients).length);
-         ws.send(
-           JSON.stringify({
-             type: "notification",
-             notification: [
-               {
-                 message: "New task assigned to you",
-                 time: "2 hours ago",
-                 color: "blue",
-               },
-               {
-                 message: "Your last task was approved",
-                 time: "5 hours ago",
-                 color: "green",
-               },
-               {
-                 message: "Weekly report due tomorrow",
-                 time: "1 day ago",
-                 color: "yellow",
-               },
-             ],
-           })
-         );
+        ws.send(
+          JSON.stringify({
+            type: "notification",
+            notification: [
+              {
+                message: "New task assigned to you",
+                time: "2 hours ago",
+                color: "blue",
+              },
+            ],
+          })
+        );
       } else if (data.type === "fetchNotifications") {
-        const { userId } = data;
-        db.sequelize
-          .query(`call notifications(:type)`, {
-            replacements: { type },
+        const { userId: uid } = data;
+        db.notification_table
+          .findAll({
+            where: { user_id: uid },
+            order: [["created_at", "DESC"]],
+            limit: 5,
+            raw: true,
           })
           .then((results) => {
-            console.log(results)
- 
-            //bring back later
             ws.send(
               JSON.stringify({
                 success: true,
@@ -61,133 +47,123 @@ module.exports = async function (server) {
               })
             );
           })
-          .catch((err) => {
-            console.log(err);
-            //res.status(500).json({ success: false, err });
-          });
+          .catch((err) => console.log(err));
       } else if (data.type === "sendNotification") {
-        const { message, user_id } = data.notification;
+        const { message: msg, user_id } = data.notification;
         const newNotification = {
-          message,
+          message: msg,
           created_at: new Date(),
           status: "unread",
           user_id,
         };
-
-        // Store notification in database
-        db.sequelize
-          .query(`call notifications(:type)`, { replacements: { type } })
-          .then((results) => {
-            //sending notification to a specific user
-            // const recipientWs = clients.get(user_id);
-            // if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-            //   recipientWs.send(
-            //     JSON.stringify({
-            //       type: "notification",
-            //       notification: newNotification,
-            //     })
-            //   );
-            // }
-            //Sending Notification to all users
-            wss.clients.forEach((client) => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(
-                  JSON.stringify({
-                    type: "notification",
-                    notification: newNotification,
-                  })
-                );
-              }
-            });
-          })
-          .catch((err) => {
-            console.log(err);
-            //res.status(500).json({ success: false, err });
-          });
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(
+              JSON.stringify({
+                type: "notification",
+                notification: newNotification,
+              })
+            );
+          }
+        });
       } else if (data.type === "markAsRead") {
-        const { notificationId, type } = data;
-
-        db.sequelize
-          .query(`call notifications(:type)`, { replacements: { type } })
-          .then((results) => {
+        const { notificationId } = data;
+        db.notification_table
+          .update({ status: "read" }, { where: { id: notificationId } })
+          .then(() => {
             ws.send(
               JSON.stringify({ type: "readNotification", notificationId })
             );
           })
-          .catch((err) => {
-            console.log(err);
-            //res.status(500).json({ success: false, err });
-          });
+          .catch((err) => console.log(err));
       }
     });
-console.log("WebSocket server started");
 
-
-console.log("WebSocket server starte 1d");
     ws.on("close", () => {
       delete clients[userId];
       console.log("WebSocket connection closed");
     });
   });
-};
+}
 
-module.exports.getNotifications = (req, res) => {
+export const getNotifications = (req, res) => {
+  const { type = "", user_id = "", id = "" } = req.query;
 
-    const { type = "", user_id = "" ,id = ""} = req.query;
-
-    db.sequelize
-      .query(`call notifications(:type, :user_id,:id)`, {
-        replacements: { type, user_id, id },
-      })
-      .then((results) => {
-        res.json({ success: true, results });
-      })
-      .catch((err) => {
-        console.log(err);
-        //res.status(500).json({ success: false, err });
+  const run = async () => {
+    if (type === "fetchNotifications") {
+      return db.notification_table.findAll({
+        where: { user_id },
+        order: [["created_at", "DESC"]],
+        limit: 5,
+        raw: true,
       });
+    }
+    if (type === "fetchAllNotifications") {
+      return db.notification_table.findAll({
+        where: { user_id },
+        order: [["created_at", "DESC"]],
+        raw: true,
+      });
+    }
+    if (type === "markAsRead") {
+      await db.notification_table.update(
+        { status: "read" },
+        { where: { id } }
+      );
+      return [{ id, status: "read" }];
+    }
+    return [];
+  };
+
+  run()
+    .then((results) => res.json({ success: true, results }))
+    .catch((err) => console.log(err));
 };
 
-module.exports.CreateNotifications = (notif_type,user_id,title,message) => {
-               db.sequelize
-               .query(
-                 `call create_notification(:notif_type,:user_id, :title,:message)`,
-                 {
-                   replacements: {
-                     notif_type,
-                     user_id,
-                     title,
-                     message
-                   },
-                 }
-               )
-               .then((result) => {
-                 console.log(result);
-                 webSocketService.sendNotification(
-                   result,
-                   user_id
-                
-                 );
-                 return result;
-               })
-               .catch((err) => {
-                 console.log(err);
-               });
+export const CreateNotifications = (notif_type, user_id, title, message) => {
+  db.notification_table
+    .create({
+      notification_type: notif_type,
+      user_id: Array.isArray(user_id)
+        ? user_id.join(",")
+        : String(user_id || ""),
+      title,
+      message,
+      status: "unread",
+    })
+    .then((result) => {
+      webSocketService.sendNotification(result, user_id);
+      return result;
+    })
+    .catch((err) => console.log(err));
 };
 
-module.exports.updateNotifications = (req ,res) => {
-  const { type = "", user_id = "" ,id = "" } = req.query;
+export const updateNotifications = (req, res) => {
+  const { type = "", user_id = "", id = "" } = req.query;
 
-       db.sequelize
-         .query(`call notifications(:type, :user_id, :id)`, {
-           replacements: { type, user_id, id },
-         })
-         .then((results) => {
-           res.json({ success: true, results });
-         })
-         .catch((err) => {
-           console.log(err);
-           res.status(500).json({ success: false, err });
-         }); 
-        
+  const run = async () => {
+    if (type === "markAsRead") {
+      await db.notification_table.update(
+        { status: "read" },
+        { where: { id } }
+      );
+      return [{ id, status: "read" }];
+    }
+    if (type === "fetchAllNotifications" || type === "fetchNotifications") {
+      return db.notification_table.findAll({
+        where: { user_id },
+        order: [["created_at", "DESC"]],
+        ...(type === "fetchNotifications" ? { limit: 5 } : {}),
+        raw: true,
+      });
+    }
+    return [];
+  };
+
+  run()
+    .then((results) => res.json({ success: true, results }))
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({ success: false, err });
+    });
 };

@@ -1,5 +1,4 @@
-const { isIP } = require('net');
-
+import { isIP } from "net";
 const validateNetwork = (networkName, ipAddress) => {
   const OFFICE_NETWORK_NAME = process.env.OFFICE_NETWORK_NAME;
   const OFFICE_IP_RANGE = process.env.OFFICE_IP_RANGE;
@@ -30,6 +29,4 @@ function ip2long(ip) {
   return long;
 }
 
-module.exports = {
-  validateNetwork,
-};
+export { validateNetwork };

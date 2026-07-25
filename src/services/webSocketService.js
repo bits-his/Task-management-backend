@@ -1,7 +1,8 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 const { Server } = require("socket.io");
-const db = require("../models"); // Make sure to import your models (or database logic)
-const transport = require("../config/nodemailer");
-
+import db from "../models/index.js"; // Make sure to import your models (or database logic)
+import transport from "../config/nodemailer.js";
 const allowedOrigins = [
   "http://localhost:5100",
   "https://task.brainstorm.ng/",
@@ -73,18 +74,18 @@ class WebSocketService {
   }
 
   fetchNotifications(userId, socket) {
-    db.sequelize
-      .query(`call notifications('fetchNotifications', :userId)`, {
-        replacements: { userId },
+    db.notification_table
+      .findAll({
+        where: { user_id: userId },
+        order: [["created_at", "DESC"]],
+        limit: 5,
+        raw: true,
       })
       .then((results) => {
-        socket.emit(
-          "notifications", // Emit the notifications to the connected user
-          {
-            success: true,
-            notifications: results,
-          }
-        );
+        socket.emit("notifications", {
+          success: true,
+          notifications: results,
+        });
       })
       .catch((err) => {
         console.error("Error fetching notifications", err);
@@ -108,10 +109,8 @@ class WebSocketService {
   }
 
   markAsRead(notificationId, socket) {
-    db.sequelize
-      .query(`call notifications('markAsRead', :notificationId)`, {
-        replacements: { notificationId },
-      })
+    db.notification_table
+      .update({ status: "read" }, { where: { id: notificationId } })
       .then(() => {
         socket.emit("notificationRead", notificationId);
       })
@@ -121,4 +120,4 @@ class WebSocketService {
   }
 }
 
-module.exports = new WebSocketService();
+export default new WebSocketService();

@@ -1,106 +1,112 @@
-import db from "../models";
+import db from "../models/index.js";
 import moment from "moment";
-let today = moment().format('YYYY-MM-DD');
+
+let today = moment().format("YYYY-MM-DD");
+
 export const insertMarketResearch = async (req, res) => {
-    const {
-        title = "",
-        industry="",
-        research_date=today,
-        summary="",
-        emergingTrends="",
-        trendTools="",
-        keyFindings="",
-        competitorName="",
-        competitorIndustry="",
-        competitorWebsite="",
-        strengths="",
-        weaknesses="",
-        opportunities="",   
-        threats="",
-        pricingStrategy="",
-        marketingStrategy="",
-        targetDemographics="",
-        painPoints="",
-        marketSegments="",
-        segmentPrioritization="",
-        keyInsights="",
-        recommendations="",
-        conductedBy="",
-        comments="",
-        date=today,
-        startup_id=""
-    } = req.body;
-console.log(req.body);
-    try {
-        // Insert into `market_research` using stored procedure
-        const result = await db.sequelize.query(
-            `CALL insert_market_research(
-                :title, :industry, :research_date, :summary, :emergingTrends, :trendTools, :keyFindings,
-                :competitorName, :competitorIndustry, :competitorWebsite, :strengths, :weaknesses,
-                :opportunities, :threats, :pricingStrategy, :marketingStrategy, :targetDemographics,
-                :painPoints, :marketSegments, :segmentPrioritization, :keyInsights, :recommendations,
-                :conductedBy, :comments,:startup_id
-            )`,
-            {
-                replacements: {
-                    title, industry, research_date:date, summary, emergingTrends, trendTools, keyFindings,
-                    competitorName, competitorIndustry, competitorWebsite, strengths, weaknesses,
-                    opportunities, threats, pricingStrategy, marketingStrategy, targetDemographics,
-                    painPoints, marketSegments, segmentPrioritization, keyInsights, recommendations,
-                    conductedBy, comments,startup_id
-                },
-            }
-        );
+  const {
+    title = "",
+    industry = "",
+    research_date = today,
+    summary = "",
+    emergingTrends = "",
+    trendTools = "",
+    keyFindings = "",
+    competitorName = "",
+    competitorIndustry = "",
+    competitorWebsite = "",
+    strengths = "",
+    weaknesses = "",
+    opportunities = "",
+    threats = "",
+    pricingStrategy = "",
+    marketingStrategy = "",
+    targetDemographics = "",
+    painPoints = "",
+    marketSegments = "",
+    segmentPrioritization = "",
+    keyInsights = "",
+    recommendations = "",
+    conductedBy = "",
+    comments = "",
+    date = today,
+    startup_id = "",
+  } = req.body;
 
-        // Get the inserted research ID
-        const researchIdResult = await db.sequelize.query("SELECT LAST_INSERT_ID() as research_id;");
-        const research_id = researchIdResult[0][0].research_id;
-  let images = [];
-  if (req.files) {
-    images = req.files.map(image => image.path);
-  }
-        // Handle file upload
-        if (req.files) {
-            
+  try {
+    const row = await db.market_research.create({
+      title,
+      industry,
+      research_date: date || research_date,
+      summary,
+      emerging_trends: emergingTrends,
+      trend_tools: trendTools,
+      key_findings: keyFindings,
+      competitor_name: competitorName,
+      competitor_industry: competitorIndustry,
+      competitor_website: competitorWebsite,
+      strengths,
+      weaknesses,
+      opportunities,
+      threats,
+      pricing_strategy: pricingStrategy,
+      marketing_strategy: marketingStrategy,
+      target_demographics: targetDemographics,
+      pain_points: painPoints,
+      market_segments: marketSegments,
+      segment_prioritization: segmentPrioritization,
+      key_insights: keyInsights,
+      recommendations,
+      conducted_by: conductedBy,
+      comments,
+      startup_id,
+    });
 
-            await db.sequelize.query(
-                `INSERT INTO market_research_files (research_id, file_name, file_path) VALUES (:research_id, :file_name, :file_path)`,
-                {
-                    replacements: { research_id, file_name:"", file_path:`${images}` },
-                }
-            );
-        }
-
-        res.json({
-            success: true,
-            message: "Market research inserted successfully!",
-            research_id,
-        });
-    } catch (error) {
-        console.error("Error inserting market research:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error inserting market research",
-            error: error.message,
-        });
+    const research_id = row.id;
+    let images = [];
+    if (req.files) {
+      images = req.files.map((image) => image.path);
+      await db.market_research_files.create({
+        research_id,
+        file_name: "",
+        file_path: images.join(","),
+      });
     }
+
+    res.json({
+      success: true,
+      message: "Market research inserted successfully!",
+      research_id,
+    });
+  } catch (error) {
+    console.error("Error inserting market research:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error inserting market research",
+      error: error.message,
+    });
+  }
 };
 
+export const getMarketResearch = async (req, res) => {
+  try {
+    const { startup_id = "", query_type = "" } = req.query;
+    const where = {};
+    if (startup_id) where.startup_id = startup_id;
 
-
-export const getMarketResearch =  (req, res) => {
- const {startup_id="",query_type=""}=req.query;
-
-    db.sequelize.query(`CALL getResearch(:query_type,:startup_id)`,{
-        replacements: {
-            startup_id,
-            query_type
-        }
-    })
-    .then((resp) => {
-        res.json({ success: true, data: resp });
-      })
-      .catch((err) => {
-        res.json({ success: false, message: err });
+    let data;
+    if (query_type === "with_files") {
+      data = await db.market_research.findAll({
+        where,
+        include: [{ model: db.market_research_files, as: "files" }],
       });
-}
+      data = data.map((r) => r.get({ plain: true }));
+    } else {
+      data = await db.market_research.findAll({ where, raw: true });
+    }
+
+    res.json({ success: true, data });
+  } catch (err) {
+    res.json({ success: false, message: err.message || err });
+  }
+};

@@ -1,9 +1,14 @@
 import passport from 'passport';
-import config from '../config/config';
-import { allowOnly } from '../services/routesHelper';
+import config from '../config/config.js';
+import { allowOnly } from '../services/routesHelper.js';
 import {
-  create, login, findAllUsers,
-  findById, update, deleteUser,
+  create,
+  createByAdmin,
+  login,
+  findAllUsers,
+  findById,
+  update,
+  deleteUser,
   verifyUserToken,
   updateUser,
   UpdateUserStatus,
@@ -13,17 +18,12 @@ import {
   updateUserStartupStatus,
   updateProfile,
   updatedept,
-} from '../controllers/user';
-import { upload } from '../config/multerConfig';
+} from '../controllers/user.js';
+import { upload } from '../config/multerConfig.js';
 
-module.exports = (app) => {
-  // create a new user
-  // app.post(
-  //   '/api/users/create',
-  //   // passport.authenticate('jwt', { session: false }),
-  //   // allowOnly(config.accessLevels.admin, create)
-  //   create
-  // );
+export default (app) => {
+  // Admin provisions a member (Approved + invite email)
+  app.post('/api/users/create', createByAdmin);
 
   app.post('/api/create_user', upload.fields([
     { name: 'profileImage', maxCount: 1 },

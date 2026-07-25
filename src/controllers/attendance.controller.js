@@ -1,11 +1,14 @@
-const models = require('../models');
-const { validateNetwork } = require('../utils/networkValidator');
-import db from "../models";
+import models from "../models/index.js";
+import { validateNetwork } from "../utils/networkValidator.js";
+import db from "../models/index.js";
+import moment from "moment-timezone";
+import Sequelize from "sequelize";
+import { getMembersForContext, getPrimaryMembershipMap } from "../services/membershipService.js";
+const {  Op  } = Sequelize;
+
 const User = db.users;
 const Attendance = db.attendances;
-const SalaryDeduction = db.SalaryDeduction;
-
-const moment = require('moment-timezone');
+const SalaryDeduction = db.SalaryDeductions;
 
 function getLocalTime(date, timeString, timezone = 'Africa/Lagos') {
   if (!timeString) {
@@ -242,47 +245,129 @@ const getTodayStatus = async (req, res) => {
 };
 
 const getAttendanceHistory = async (req, res) => {
-  
-    const { user_id, start_date, end_date, role="" } = req.query;
+  try {
+    const {
+      user_id,
+      start_date,
+      end_date,
+      role = "",
+      startup_id = "",
+      org_id = "",
+      dept_id = "",
+    } = req.query;
 
-   
-    if (!user_id || !start_date || !end_date ) {
+    if (!user_id || !start_date || !end_date) {
       return res.status(400).json({
         success: false,
         error: {
-          code: 'BAD_REQUEST',
-          message: 'Missing required query parameters: user_id, start_date, end_date, role.',
+          code: "BAD_REQUEST",
+          message:
+            "Missing required query parameters: user_id, start_date, end_date, role.",
         },
       });
     }
 
-    // Call the stored procedure using raw query
-   db.sequelize.query(
-      `CALL GetAttendanceHistory(:user_id, :start_date, :end_date, :role)`,
-      {
-        replacements: { user_id, start_date, end_date, role },
+    const ORG_REPORT_ROLES = [
+      "admin",
+      "manager",
+      "Manager",
+      "accountant",
+      "ceos",
+      "CEO",
+      "CTO",
+    ];
+    const isOrgWide = ORG_REPORT_ROLES.includes(role);
+
+    const attendanceWhere = {
+      date: { [Op.between]: [start_date, end_date] },
+    };
+
+    if (!isOrgWide) {
+      attendanceWhere.user_id = user_id;
+    } else if (startup_id || org_id) {
+      const members = await getMembersForContext({
+        startup_id: startup_id || null,
+        org_id: org_id || null,
+        dept_id: dept_id || null,
+      });
+      const memberIds = members.map((m) => m.user_id).filter(Boolean);
+      if (memberIds.length) {
+        attendanceWhere.user_id = { [Op.in]: memberIds };
+      } else {
+        return res.json({ success: true, data: [] });
       }
-    ).then((resp)=>
-      
-  res.status(200).json({
-      success: true,
-      data: resp,
-    }))
-    .catch(
-(err)=>(
+    }
 
+    const rows = await db.attendances.findAll({
+      where: attendanceWhere,
+      include: [
+        {
+          model: db.users,
+          as: "users",
+          required: !isOrgWide,
+        },
+      ],
+      order: [["date", "ASC"]],
+    });
 
-     res.status(500).json({
+    const userIds = [
+      ...new Set(
+        rows
+          .map((a) => {
+            const plain = a.get({ plain: true });
+            return plain.users?.user_id || plain.user_id;
+          })
+          .filter(Boolean)
+      ),
+    ];
+    const primaryMap = userIds.length
+      ? await getPrimaryMembershipMap(userIds)
+      : {};
+
+    const data = rows.map((a) => {
+      const plain = a.get({ plain: true });
+      const u = plain.users || {};
+      const ctx = primaryMap[u.user_id || plain.user_id] || {};
+      return {
+        user_id: u.user_id || plain.user_id,
+        fullname: u.fullname,
+        email: u.email,
+        phone_no: u.phone_no,
+        address: u.address,
+        role: ctx.role || null,
+        status: u.status,
+        startup_id: ctx.startup_id || null,
+        starting_date: u.starting_date,
+        end_date: u.end_date,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        attendance_id: plain.id,
+        date: plain.date,
+        sign_in_time: plain.sign_in_time,
+        sign_out_time: plain.sign_out_time,
+        attendance_status: plain.status,
+        notes: plain.notes,
+        sign_out_status: plain.sign_out_status,
+        network_name: plain.network_name,
+        ip_address: plain.ip_address,
+        startup_name: ctx.label || null,
+        startup_description: null,
+        startup_logo: ctx.logo || null,
+      };
+    });
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error("getAttendanceHistory error:", error);
+    return res.status(500).json({
       success: false,
       error: {
-        code: 'SERVER_ERROR',
-        message: 'An error occurred while processing your request',
-    
+        code: "SERVER_ERROR",
+        message: "Failed to fetch attendance history",
+        details: error.message,
       },
-    })
-    )
-    );
-  
+    });
+  }
 };
 
 const checkRouterConnection = async () => {
@@ -299,12 +384,4 @@ const checkRouterConnection = async () => {
   }
 };
 
-
-
-module.exports = {
-  signIn,
-  signOut,
-  getTodayStatus,
-  getAttendanceHistory,
-  checkRouterConnection,
-};
+export { signIn, signOut, getTodayStatus, getAttendanceHistory, checkRouterConnection };

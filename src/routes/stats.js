@@ -1,10 +1,9 @@
-const { getStats, getStatsAdmin } = require("../controllers/stats");
-const db = require("../models");
-
-
-module.exports = (app)=>{
+import { getStats, getStatsAdmin, getDashboardSummaryHandler } from "../controllers/stats.js";
+import db from "../models/index.js";
+export default (app)=>{
     app.get("/api/get-stats",getStats);
     app.get("/api/get-statts-admin",getStatsAdmin);
+    app.get("/api/dashboard/summary", getDashboardSummaryHandler);
     app.get('/api/analytics/status-distribution', async (req, res) => {
         const {assigned_to=""}=req.query;
         try {

@@ -31,11 +31,9 @@ export default (sequelize, DataTypes) => {
         allowNull: true,
       },
       password: DataTypes.STRING,
-      role: DataTypes.STRING,
       status: DataTypes.STRING(45),
-      startup_id: DataTypes.STRING,
+      /** Home org at registration; active context lives on user_memberships */
       org_id: DataTypes.STRING,
-      dept_id: DataTypes.STRING,
       starting_date: DataTypes.STRING,
       end_date: DataTypes.STRING,
       nin: {
@@ -58,22 +56,72 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      access_to: {
-        type: DataTypes.TEXT("long"),
+      email_verified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      email_verify_token: {
+        type: DataTypes.STRING(128),
         allowNull: true,
       },
-      functionalities: {
-        type: DataTypes.TEXT("long"),
+      email_verify_expires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      password_reset_token: {
+        type: DataTypes.STRING(128),
+        allowNull: true,
+      },
+      password_reset_expires: {
+        type: DataTypes.DATE,
         allowNull: true,
       },
     },
     {
-      timestamps: true, // This will handle createdAt and updatedAt
+      freezeTableName: true,
+      timestamps: true,
     }
   );
 
   User.associate = function (models) {
-    // Define associations here
+    User.belongsTo(models.organizations, {
+      foreignKey: "org_id",
+      targetKey: "org_id",
+      as: "organization",
+    });
+    User.hasMany(models.attendances, {
+      foreignKey: "user_id",
+      sourceKey: "user_id",
+      as: "attendances",
+    });
+    User.hasMany(models.assignee_table, {
+      foreignKey: "user_id",
+      sourceKey: "user_id",
+      as: "assignments",
+      constraints: false,
+    });
+    User.hasMany(models.comments, {
+      foreignKey: "user_id",
+      sourceKey: "user_id",
+      as: "comments",
+      constraints: false,
+    });
+    if (models.user_sessions) {
+      User.hasMany(models.user_sessions, {
+        foreignKey: "user_id",
+        sourceKey: "user_id",
+        as: "sessions",
+        constraints: false,
+      });
+    }
+    if (models.user_memberships) {
+      User.hasMany(models.user_memberships, {
+        foreignKey: "user_id",
+        sourceKey: "user_id",
+        as: "memberships",
+      });
+    }
   };
 
   return User;

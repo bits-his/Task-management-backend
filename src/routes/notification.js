@@ -1,7 +1,6 @@
 
-const { getNotifications, updateNotifications } = require("../controllers/notification");
-
-module.exports = (app) => {
+import { getNotifications, updateNotifications } from "../controllers/notification.js";
+export default (app) => {
   app.get(
     "/notifications",
     

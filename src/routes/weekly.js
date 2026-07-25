@@ -1,26 +1,24 @@
-// routes/weeklyReport.js
+import {
+  handleWeeklyReport,
+  submitReport,
+  submitExcuse,
+  getUserReports,
+  getAllReports,
+  updateReport,
+  updateExcuseStatus,
+  getSuggestedTasks,
+} from "../controllers/weeklyReportController.js";
 
-import { 
-    handleWeeklyReport,
-    submitReport,
-    submitExcuse,
-    getUserReports,
-    getAllReports,
-    updateReport,
-    updateExcuseStatus
-} from '../controllers/weeklyReportController';
+export default (app) => {
+  app.post("/api/weekly-report", handleWeeklyReport);
 
-module.exports = (app) => {
-    // Generic handler
-    app.post('/api/weekly-report', handleWeeklyReport);
+  app.post("/api/post-report", submitReport);
+  app.get("/api/get-user-reports", getUserReports);
+  app.post("/api/get-all-reports", getAllReports);
+  app.post("/api/update-report", updateReport);
+  app.post("/api/report-suggested-tasks", getSuggestedTasks);
+  app.get("/api/report-suggested-tasks", getSuggestedTasks);
 
-    // Reports
-    app.post('/api/post-report', submitReport);
-    app.get('/api/get-user-reports', getUserReports);
-    app.post('/api/get-all-reports', getAllReports);
-    app.post('/api/update-report', updateReport);
-
-    // Excuses
-    app.post('/api/post-excuse', submitExcuse);
-    app.put('/api/update-excuse', updateExcuseStatus);
+  app.post("/api/post-excuse", submitExcuse);
+  app.put("/api/update-excuse", updateExcuseStatus);
 };

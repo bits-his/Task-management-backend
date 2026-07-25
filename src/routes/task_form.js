@@ -4,9 +4,9 @@ import {
   update_task_status,
   updateAssignee,
   updateSubTask,
-} from "../controllers/task_form";
-import { upload } from "../config/multerConfig";
-module.exports = (app) => {
+} from "../controllers/task_form.js";
+import { upload } from "../config/multerConfig.js";
+export default (app) => {
   app.post("/api/create_task", upload.array("images", 5), task_form);
   app.post("/api/update_task_status", update_task_status);
   app.get("/api/get_task", get_task_form);

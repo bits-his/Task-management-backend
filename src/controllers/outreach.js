@@ -1,73 +1,83 @@
-import db from "../models";
+import db from "../models/index.js";
 
-const outreach = (req, res) => {
-  const {
-    query_type = "create",
-    LeadID = "",
-    Type = "",
-    Date = "",
-    Outcome = "",
-    Notes = "",
-    FollowUpDate = "",
-    startup_id=""
-  } = req.body;
-  db.sequelize
-    .query(
-      `CALL outreach(:query_type, :LeadID, :Type, :Date, :Outcome, :Notes,:FollowUpDate,:startup_id)`,
-      {
-        replacements: {
-          query_type,
-          LeadID,
-          Type,
-          Date,
-          Outcome,
-          Notes,
-          FollowUpDate,
-          startup_id
-        },
-      }
-    )
-    .then((data) => res.json({ success: true, data }))
-    .catch((err) => {
-      console.error("Error managing contacts:", err);
-      res.status(500).json({ success: false, error: err.message });
+const runOutreach = async ({
+  query_type = "create",
+  LeadID = "",
+  Type = "",
+  Date = "",
+  Outcome = "",
+  Notes = "",
+  FollowUpDate = "",
+}) => {
+  if (query_type === "create" || query_type === "insert") {
+    const row = await db.Outreach.create({
+      LeadID: LeadID || null,
+      Type,
+      Date: Date || null,
+      Outcome,
+      Notes,
+      FollowUpDate: FollowUpDate || null,
     });
+    return [row.get({ plain: true })];
+  }
+  if (query_type === "select") {
+    return db.Outreach.findAll({ raw: true });
+  }
+  return [];
 };
 
-const get_outreach = (req, res) => {
-  const {
-    query_type = "select",
-    LeadID = "",
-    Type = "",
-    Date = "",
-    Outcome = "",
-    Notes = "",
-    FollowUpDate = "",
-
-  } = req.body;
-  const {startup_id=""}=req.query
-
-  db.sequelize
-    .query(
-      `CALL outreach(:query_type, :LeadID, :Type, :Date, :Outcome, :Notes,:FollowUpDate,:startup_id)`,
-      {
-        replacements: {
-          query_type,
-          LeadID,
-          Type,
-          Date,
-          Outcome,
-          Notes,
-          FollowUpDate,
-          startup_id
-        },
-      }
-    )
-    .then((data) => res.json({ success: true, data }))
-    .catch((err) => {
-      console.error("Error managing contacts:", err);
-      res.status(500).json({ success: false, error: err.message });
+const outreach = async (req, res) => {
+  try {
+    const {
+      query_type = "create",
+      LeadID = "",
+      Type = "",
+      Date = "",
+      Outcome = "",
+      Notes = "",
+      FollowUpDate = "",
+    } = req.body;
+    const data = await runOutreach({
+      query_type,
+      LeadID,
+      Type,
+      Date,
+      Outcome,
+      Notes,
+      FollowUpDate,
     });
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("Error managing contacts:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const get_outreach = async (req, res) => {
+  try {
+    const {
+      query_type = "select",
+      LeadID = "",
+      Type = "",
+      Date = "",
+      Outcome = "",
+      Notes = "",
+      FollowUpDate = "",
+    } = req.body;
+    const data = await runOutreach({
+      query_type,
+      LeadID,
+      Type,
+      Date,
+      Outcome,
+      Notes,
+      FollowUpDate,
+    });
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error("Error managing contacts:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 };
 
 export { get_outreach, outreach };

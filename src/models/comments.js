@@ -1,6 +1,6 @@
 export default (sequelize, DataTypes) => {
   const Comments = sequelize.define(
-    'comments',
+    "comments",
     {
       id: {
         type: DataTypes.INTEGER,
@@ -8,15 +8,11 @@ export default (sequelize, DataTypes) => {
         autoIncrement: true,
       },
       user_id: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(10),
         allowNull: false,
-        references: {
-          model: 'users',
-          key: 'user_id',
-        },
       },
       task_id: {
-        type: DataTypes.TEXT,
+        type: DataTypes.STRING(30),
         allowNull: false,
       },
       description: {
@@ -30,15 +26,17 @@ export default (sequelize, DataTypes) => {
       },
     },
     {
+      freezeTableName: true,
       timestamps: true,
     }
   );
 
   Comments.associate = (models) => {
     Comments.belongsTo(models.users, {
-      foreignKey: 'user_id',
-      targetKey: 'user_id',
-      as: 'users',
+      foreignKey: "user_id",
+      targetKey: "user_id",
+      as: "users",
+      constraints: false,
     });
   };
 

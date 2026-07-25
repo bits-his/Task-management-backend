@@ -1,25 +1,30 @@
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer";
 
-// const transport = nodemailer.createTransport({
-//   host: "mail.kirmas.kn.gov.ng",
-//   port: 465,
-//   secure: true, // secure:true for port 465, secure:false for port 587
-//   auth: {
-//     user: "notifications@kirmas.kn.gov.ng",
-//     pass: "kirmas_123",
-//   },
-//   tls: {
-//     rejectUnauthorized: false,
-//   },
-// });
+/**
+ * Google SMTP (Gmail) via env:
+ *   SMTP_HOST=smtp.gmail.com
+ *   SMTP_PORT=465
+ *   SMTP_SECURE=true
+ *   SMTP_USER=your@gmail.com
+ *   SMTP_PASS=app-password   (Google Account → App passwords)
+ *   MAIL_FROM="Brainstorm Ops <your@gmail.com>"
+ *
+ * For port 587 use SMTP_SECURE=false (STARTTLS).
+ */
+const port = Number(process.env.SMTP_PORT || 465);
+const secure =
+  process.env.SMTP_SECURE != null
+    ? String(process.env.SMTP_SECURE).toLowerCase() === "true"
+    : port === 465;
 
 const transporter = nodemailer.createTransport({
-  host: 'sandbox.smtp.mailtrap.io',
-  port: 2525,
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port,
+  secure,
   auth: {
-    user: '10b0a43d894b8b',
-    pass: 'f96b90d054a19a'  
-  }
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
-module.exports = transporter;
+export default transporter;

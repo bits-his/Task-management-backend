@@ -1,4 +1,9 @@
-import db from "../models";
+/**
+ * Posts module still uses MySQL stored procedures.
+ * Post tables (posts, likes, saves, etc.) are not in task1.sql —
+ * leave on CALL until DDL is available, then migrate like other modules.
+ */
+import db from "../models/index.js";
 
 export const createPost = async (req, res) => {
   try {
@@ -143,14 +148,3 @@ export const getAllPosts = (req, res) => {
 
 
 
-export const getOrganizationTree = (req, res) =>{
-
-  db.sequelize.query(`SELECT * FROM organization_chart`)
-  .then((resp) => {
-    res.json({ success: true, data: resp });
-  })
-  .catch((err) => {
-    res.json({ success: false, message: err });
-  });
-
-}
