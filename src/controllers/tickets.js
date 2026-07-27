@@ -1,5 +1,6 @@
 import db from "../models/index.js";
 import { v4 as uuidv4 } from "uuid";
+
 const tickets = async (req, res) => {
   try {
     const {
@@ -10,6 +11,8 @@ const tickets = async (req, res) => {
       priority = null,
       department = null,
       user_id = null,
+      startup_id = null,
+      org_id = null,
     } = req.body;
     const ticket_id = uuidv4();
 
@@ -22,26 +25,78 @@ const tickets = async (req, res) => {
         priority,
         department,
         user_id,
+        startup_id,
+        org_id,
       });
       return res.json({ success: true, data: [row.get({ plain: true })] });
     }
 
     res.json({ success: true, data: [] });
   } catch (err) {
-    console.error("Error managing contacts:", err);
+    console.error("Error managing tickets:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
 const get_tickets = async (req, res) => {
   try {
+    const { startup_id = null, org_id = null } = req.query;
+    const where = {};
+    if (startup_id) where.startup_id = startup_id;
+    if (org_id) where.org_id = org_id;
+
     const data = await db.tickets.findAll({
+      where,
+      include: [
+        {
+          model: db.users,
+          as: "creator",
+          attributes: ["fullname", "email", "user_id"],
+          required: false,
+        },
+      ],
       order: [["created_at", "DESC"]],
-      raw: true,
     });
-    res.json({ success: true, data });
+
+    const userIds = [
+      ...new Set(
+        data
+          .map((row) => row.user_id)
+          .filter(Boolean)
+          .map(String)
+      ),
+    ];
+
+    const memberships = userIds.length
+      ? await db.user_memberships.findAll({
+          where: { user_id: userIds, status: "active" },
+          attributes: ["user_id", "role", "startup_id", "is_primary"],
+          order: [["is_primary", "DESC"]],
+        })
+      : [];
+
+    const roleByUser = {};
+    for (const m of memberships) {
+      const uid = String(m.user_id);
+      if (!roleByUser[uid]) roleByUser[uid] = m.role;
+    }
+
+    const plain = data.map((row) => {
+      const t = row.get({ plain: true });
+      const creator = t.creator || null;
+      delete t.creator;
+      const uid = creator?.user_id || t.user_id;
+      return {
+        ...t,
+        requester_name: creator?.name || null,
+        requester_email: creator?.email || null,
+        requester_role: (uid && roleByUser[String(uid)]) || null,
+      };
+    });
+
+    res.json({ success: true, data: plain });
   } catch (err) {
-    console.error("Error managing contacts:", err);
+    console.error("Error fetching tickets:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -69,7 +124,7 @@ const update_tickets = async (req, res) => {
     await db.tickets.update(fields, { where: { ticket_id } });
     res.json({ success: true, data: [{ ticket_id, ...fields }] });
   } catch (err) {
-    console.error("Error managing contacts:", err);
+    console.error("Error updating ticket:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };

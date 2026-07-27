@@ -14,6 +14,7 @@ import configurePassport from "./config/passport.js";
 import ensureAuthSchema from "./services/ensureAuthSchema.js";
 import ensureReportSchema from "./services/ensureReportSchema.js";
 import ensureBdSchema from "./services/ensureBdSchema.js";
+import ensureTicketsSchema from "./services/ensureTicketsSchema.js";
 
 import userRoutes from "./routes/user.js";
 import startupsRoutes from "./routes/startups.js";
@@ -83,6 +84,7 @@ models.sequelize
     await ensureAuthSchema(models.sequelize);
     await ensureReportSchema(models.sequelize);
     await ensureBdSchema(models.sequelize);
+    await ensureTicketsSchema(models.sequelize);
     await seedDefaultOpportunities();
     try {
       const normalized = await normalizeRolesInDb();

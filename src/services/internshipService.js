@@ -142,17 +142,28 @@ function withSlotStats(opportunity, occupiedCount = 0) {
 export async function listOpenOpportunities() {
   const rows = await db.internship_opportunity.findAll({
     where: {
-      status: "open",
-      [Op.or]: [
-        { deadline: null },
-        { deadline: { [Op.gte]: new Date().toISOString().slice(0, 10) } },
-      ],
+      status: { [Op.in]: ["open", "closed"] },
     },
-    order: [["created_at", "DESC"]],
+    order: [
+      [
+        db.sequelize.literal(
+          "CASE WHEN status = 'open' THEN 0 WHEN status = 'closed' THEN 1 ELSE 2 END"
+        ),
+        "ASC",
+      ],
+      ["created_at", "DESC"],
+    ],
     raw: true,
   });
-  const counts = await occupiedSlotCountByOpportunity(rows.map((r) => r.id));
-  return rows.map((row) => withSlotStats(row, counts.get(row.id) || 0));
+  const today = new Date().toISOString().slice(0, 10);
+  const visible = rows.filter((row) => {
+    if (row.status === "closed") return true;
+    if (row.status !== "open") return false;
+    if (!row.deadline) return true;
+    return row.deadline >= today;
+  });
+  const counts = await occupiedSlotCountByOpportunity(visible.map((r) => r.id));
+  return visible.map((row) => withSlotStats(row, counts.get(row.id) || 0));
 }
 
 export async function listAllOpportunities(query = {}) {

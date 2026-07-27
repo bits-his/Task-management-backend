@@ -11,6 +11,8 @@ export default (sequelize, DataTypes) => {
       status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: "open" },
       user_id: { type: DataTypes.STRING(20), allowNull: true },
       assigned_to: { type: DataTypes.STRING(50), allowNull: true },
+      startup_id: { type: DataTypes.STRING(50), allowNull: true },
+      org_id: { type: DataTypes.STRING(50), allowNull: true },
     },
     {
       freezeTableName: true,
