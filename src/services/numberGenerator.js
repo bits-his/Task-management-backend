@@ -1,17 +1,106 @@
 import db from "../models/index.js";
 
 /**
+ * Ensure a number_generator row exists (seeds from defaults / max existing codes).
+ * Used when dumps omit rows the old stored procedures assumed were present.
+ */
+export async function ensureNumberGeneratorRow(
+  prefix,
+  description,
+  options = {}
+) {
+  const {
+    transaction,
+    level = "1",
+    max_code = 10,
+    seedFromTaskIds = false,
+  } = options;
+
+  let row = await db.number_generator.findOne({
+    where: { prefix, description },
+    lock: transaction?.LOCK?.UPDATE,
+    transaction,
+  });
+  if (row) return row;
+
+  let last_code = 0;
+  if (seedFromTaskIds) {
+    try {
+      const [rows] = await db.sequelize.query(
+        `SELECT MAX(CAST(SUBSTRING(task_id, 4) AS UNSIGNED)) AS max_n
+         FROM task_form
+         WHERE task_id LIKE 'TAS%'`,
+        { transaction }
+      );
+      last_code = Number(rows?.[0]?.max_n) || 0;
+    } catch {
+      last_code = 0;
+    }
+  }
+
+  const maxPk = await db.number_generator.max("code", { transaction });
+  const nextPk = Number(maxPk || 0) + 1;
+
+  try {
+    row = await db.number_generator.create(
+      {
+        prefix,
+        code: nextPk,
+        last_code,
+        description,
+        level,
+        max_code,
+      },
+      { transaction }
+    );
+  } catch (err) {
+    // Race: another request may have inserted the same prefix/description
+    row = await db.number_generator.findOne({
+      where: { prefix, description },
+      lock: transaction?.LOCK?.UPDATE,
+      transaction,
+    });
+    if (!row) throw err;
+  }
+  return row;
+}
+
+/**
  * Atomically increment number_generator and return the next code string.
  * Mirrors stored-procedure ID generation (STA, dpt, TAS, USR, etc.).
+ * Creates the generator row if missing (e.g. TAS/task).
  */
 export async function nextCode(prefix, description, options = {}) {
-  const { pad = 2, numericOnly = false, transaction: outerTx } = options;
+  const {
+    pad = 2,
+    numericOnly = false,
+    transaction: outerTx,
+    ensure = true,
+    seedFromTaskIds = prefix === "TAS" && description === "task",
+    level = "1",
+    max_code = pad,
+  } = options;
+
   const run = async (transaction) => {
-    const row = await db.number_generator.findOne({
+    let row = await db.number_generator.findOne({
       where: { prefix, description },
       lock: transaction.LOCK.UPDATE,
       transaction,
     });
+
+    if (!row && ensure) {
+      await ensureNumberGeneratorRow(prefix, description, {
+        transaction,
+        level,
+        max_code,
+        seedFromTaskIds,
+      });
+      row = await db.number_generator.findOne({
+        where: { prefix, description },
+        lock: transaction.LOCK.UPDATE,
+        transaction,
+      });
+    }
 
     if (!row) {
       throw new Error(
@@ -48,7 +137,7 @@ export async function nextStartupCode(transaction) {
 
   try {
     await nextCode("STA", "startup", { pad: 5, transaction });
-  } catch (err) {
+  } catch {
     // STA row may be missing in some dumps; strp is the source of startup_id
   }
 
@@ -95,4 +184,4 @@ export async function nextUserId(rolePrefix = "USR") {
   });
 }
 
-export default { nextCode, nextStartupCode, nextUserId };
+export default { nextCode, nextStartupCode, nextUserId, ensureNumberGeneratorRow };

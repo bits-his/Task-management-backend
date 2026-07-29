@@ -1,11 +1,17 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import passport from "passport";
+import moment from "moment-timezone";
 
 import db from "../models/index.js";
 const User = db.users;
 const Attendance = db.attendances;
 // const { attendance : Attendance } = models;
+
+const LAGOS_TZ = "Africa/Lagos";
+function todayLagos() {
+  return moment.tz(LAGOS_TZ).format("YYYY-MM-DD");
+}
 
 // load input validation
 import validateRegisterForm from "../validation/register.js";
@@ -447,8 +453,8 @@ const login = async (req, res) => {
         .json({ success: false, error: "Incorrect password" });
     }
 
-    // Get today's date for attendance
-    const date = new Date().toISOString().split("T")[0];
+    // Get today's date for attendance (Africa/Lagos)
+    const date = todayLagos();
     const attendance = await Attendance.findOne({
       where: { user_id: user.user_id, date },
     });
@@ -640,8 +646,8 @@ const verifyUserToken = async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "user not found" });
     }
-    //  Get today's date for attendance
-    const date = new Date().toISOString().split("T")[0];
+    //  Get today's date for attendance (Africa/Lagos)
+    const date = todayLagos();
     const attendance = await Attendance.findOne({
       where: { user_id: user.user_id, date },
     });

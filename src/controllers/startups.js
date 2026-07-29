@@ -301,12 +301,12 @@ export const getAllStartupMembers = async (req, res) => {
   try {
     const { startup_id = "", dept_id = "", org_id = "" } = req.query;
 
-    if (!startup_id) {
+    if (!startup_id && !org_id) {
       return res.json({ success: true, data: [] });
     }
 
     const data = await getMembersForContext({
-      startup_id,
+      startup_id: startup_id || null,
       dept_id: dept_id || null,
       org_id: org_id || null,
     });

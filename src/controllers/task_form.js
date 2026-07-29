@@ -111,6 +111,8 @@ async function handleTaskQuery(params) {
     comment = null,
     created_by = null,
     startup_id = null,
+    project_id = null,
+    org_id = null,
     submitted_at = null,
     images = "",
     subtasks = null,
@@ -137,7 +139,9 @@ async function handleTaskQuery(params) {
             status,
             assigned_to,
             created_by,
-            startup_id,
+            startup_id: startup_id || null,
+            project_id: project_id || null,
+            org_id: org_id || null,
             images,
           },
           { transaction }
@@ -160,8 +164,21 @@ async function handleTaskQuery(params) {
     }
 
     case "select": {
+      const where = {};
+      if (project_id) {
+        where.project_id = project_id;
+        if (org_id) where.org_id = org_id;
+      } else if (startup_id) {
+        where.startup_id = startup_id;
+      } else if (org_id) {
+        where.org_id = org_id;
+        where.startup_id = null;
+      } else {
+        return [];
+      }
+
       const tasks = await db.task_form.findAll({
-        where: { startup_id },
+        where,
         order: [["created_at", "DESC"]],
         raw: true,
       });
@@ -212,6 +229,17 @@ async function handleTaskQuery(params) {
     }
 
     case "underReview": {
+      const taskWhere = {};
+      if (project_id) {
+        taskWhere.project_id = project_id;
+        if (org_id) taskWhere.org_id = org_id;
+      } else if (startup_id) {
+        taskWhere.startup_id = startup_id;
+      } else if (org_id) {
+        taskWhere.org_id = org_id;
+        taskWhere.startup_id = null;
+      }
+
       const assignees = await db.assignee_table.findAll({
         where: { status: "underReview" },
         include: [
@@ -223,7 +251,7 @@ async function handleTaskQuery(params) {
           {
             model: db.task_form,
             as: "task",
-            where: { startup_id },
+            where: Object.keys(taskWhere).length ? taskWhere : undefined,
             required: true,
           },
         ],
@@ -259,23 +287,68 @@ async function handleTaskQuery(params) {
     }
 
     case "edit-task": {
-      await db.task_form.update(
-        { title, due_date, priority, description, status },
-        { where: { task_id: resolvedTaskId } }
-      );
-      const list = parseSubtasks(subtasks);
-      if (list.length) {
-        await db.subtasks.destroy({ where: { task_id: resolvedTaskId } });
-        for (const st of list) {
-          if (st?.title) {
-            await db.subtasks.create({
-              task_id: resolvedTaskId,
-              title: st.title,
-            });
+      return db.sequelize.transaction(async (transaction) => {
+        const fields = {};
+        if (title != null) fields.title = title;
+        if (due_date != null) fields.due_date = due_date;
+        if (priority != null) fields.priority = priority;
+        if (description != null) fields.description = description;
+        if (status != null) fields.status = status;
+        if (assigned_to != null) fields.assigned_to = assigned_to;
+        if (images != null && String(images).trim() !== "") {
+          const existing = await db.task_form.findOne({
+            where: { task_id: resolvedTaskId },
+            attributes: ["images"],
+            raw: true,
+            transaction,
+          });
+          const prev = String(existing?.images || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const next = String(images)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          fields.images = [...prev, ...next].join(",");
+        }
+
+        if (Object.keys(fields).length) {
+          await db.task_form.update(fields, {
+            where: { task_id: resolvedTaskId },
+            transaction,
+          });
+        }
+
+        if (assigned_to != null && String(assigned_to).trim() !== "") {
+          await db.assignee_table.update(
+            { status: "deactivated" },
+            { where: { task_id: resolvedTaskId }, transaction }
+          );
+          await insertAssignees(resolvedTaskId, assigned_to, transaction);
+        }
+
+        if (subtasks != null) {
+          const list = parseSubtasks(subtasks);
+          await db.subtasks.destroy({
+            where: { task_id: resolvedTaskId },
+            transaction,
+          });
+          for (const st of list) {
+            if (st?.title) {
+              await db.subtasks.create(
+                {
+                  task_id: resolvedTaskId,
+                  title: st.title,
+                },
+                { transaction }
+              );
+            }
           }
         }
-      }
-      return [{ task_id: resolvedTaskId }];
+
+        return [{ task_id: resolvedTaskId }];
+      });
     }
 
     case "update-status": {
@@ -388,6 +461,8 @@ const task_form = async (req, res) => {
       comment = null,
       created_by = null,
       startup_id = null,
+      project_id = null,
+      org_id = null,
       submitted_at = null,
       subtasks = null,
     } = req.body;
@@ -415,43 +490,70 @@ const task_form = async (req, res) => {
       comment,
       created_by,
       startup_id,
+      project_id,
+      org_id,
       submitted_at,
       images: images.join(","),
       subtasks:
-        query_type === "reassign" ||
-        query_type === "edit-task" ||
-        query_type === "update-status"
+        query_type === "reassign" || query_type === "update-status"
           ? null
           : subtasks || null,
     });
 
     if (query_type == "create") {
+      const taskCode =
+        Array.isArray(data) && data[0]?.task_id ? data[0].task_id : "";
       CreateNotifications(
         "Task",
         assigned_to,
-        "Task Created",
-        `New task has been assigned to you with a priority of ${priority}`
+        "Task assigned",
+        `New task${title ? `: ${title}` : ""} — priority ${priority || "medium"}.`,
+        { action_url: taskCode ? `/app/tasks/view-task/${taskCode}` : "/app/tasks" }
       );
+    } else if (query_type == "edit-task") {
+      const taskCode = id || (Array.isArray(data) && data[0]?.task_id);
+      if (processedAssignedTo) {
+        CreateNotifications(
+          "Task",
+          processedAssignedTo,
+          "Task updated",
+          `A task assigned to you was updated${title ? `: ${title}` : ""}.`,
+          {
+            action_url: taskCode
+              ? `/app/tasks/view-task/${taskCode}`
+              : "/app/tasks",
+          }
+        );
+      }
     } else if (query_type == "under-review") {
       CreateNotifications(
         "Task",
         created_by,
-        "Task Review",
-        `A task has been submitted to you for review `
+        "Task review needed",
+        `A task was submitted for your review${title ? `: ${title}` : ""}.`,
+        {
+          action_url: id ? `/app/tasks/view-task/${id}` : "/app/tasks",
+        }
       );
     } else if (query_type == "completed") {
       CreateNotifications(
         "Task",
         created_by,
-        "Task Completed",
-        `The Task ${title} has been reviewed and is now completed`
+        "Task completed",
+        `The task ${title || ""} has been reviewed and is now completed.`,
+        {
+          action_url: id ? `/app/tasks/view-task/${id}` : "/app/tasks",
+        }
       );
     } else if (query_type == "reassign") {
       CreateNotifications(
         "Task",
-        created_by,
-        "Task Reassigned",
-        `The Task ${title} has been Reassigned to you`
+        processedAssignedTo || assigned_to,
+        "Task reassigned",
+        `A task was reassigned to you${title ? `: ${title}` : ""}.`,
+        {
+          action_url: id ? `/app/tasks/view-task/${id}` : "/app/tasks",
+        }
       );
     }
     res.json({ success: true, data });
@@ -475,7 +577,13 @@ const get_task_form = async (req, res) => {
       created_by = null,
       submitted_at = null,
     } = req.body;
-    const { query_type = "select", task_id = 0, startup_id = null } = req.query;
+    const {
+      query_type = "select",
+      task_id = 0,
+      startup_id = null,
+      project_id = null,
+      org_id = null,
+    } = req.query;
 
     const data = await handleTaskQuery({
       query_type,
@@ -490,6 +598,8 @@ const get_task_form = async (req, res) => {
       comment,
       created_by,
       startup_id,
+      project_id,
+      org_id,
       submitted_at,
       images: "",
       subtasks: null,

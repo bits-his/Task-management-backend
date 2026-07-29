@@ -102,6 +102,7 @@ export const NAV = {
   WORK: "Work",
   USER_MANAGEMENT: "User Management",
   APPLICATION_MANAGEMENT: "Application Management",
+  PROJECTS: "Projects",
   OPERATIONS: "Operations",
   EXCUSES: "Excuses",
   POSTS: "Posts",
@@ -119,6 +120,7 @@ const ADMIN_ACCESS = [
   NAV.DASHBOARD,
   NAV.ATTENDANCE,
   NAV.WORK,
+  NAV.PROJECTS,
   NAV.USER_MANAGEMENT,
   NAV.APPLICATION_MANAGEMENT,
   NAV.OPERATIONS,
@@ -128,9 +130,13 @@ const ADMIN_ACCESS = [
 ].join(",");
 
 const ADMIN_FUNCS = [WORK_FUNCS, USER_FUNCS, APP_FUNCS, OPS_FUNCS].join(",");
-const MEMBER_ACCESS = [NAV.DASHBOARD, NAV.ATTENDANCE, NAV.WORK, NAV.TICKET].join(
-  ","
-);
+const MEMBER_ACCESS = [
+  NAV.DASHBOARD,
+  NAV.ATTENDANCE,
+  NAV.WORK,
+  NAV.PROJECTS,
+  NAV.TICKET,
+].join(",");
 
 export const ROLE_ACCESS_PRESETS = {
   admin: { access_to: ADMIN_ACCESS, functionalities: ADMIN_FUNCS },
@@ -140,6 +146,7 @@ export const ROLE_ACCESS_PRESETS = {
       NAV.DASHBOARD,
       NAV.ATTENDANCE,
       NAV.WORK,
+      NAV.PROJECTS,
       NAV.OPERATIONS,
       NAV.TICKET,
     ].join(","),
@@ -150,6 +157,7 @@ export const ROLE_ACCESS_PRESETS = {
       NAV.DASHBOARD,
       NAV.ATTENDANCE,
       NAV.WORK,
+      NAV.PROJECTS,
       NAV.OPERATIONS,
       NAV.EXCUSES,
       NAV.POSTS,

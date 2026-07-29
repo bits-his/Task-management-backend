@@ -15,6 +15,8 @@ export default (sequelize, DataTypes) => {
       assigned_to: { type: DataTypes.STRING(1000), allowNull: true },
       created_by: { type: DataTypes.STRING(20), allowNull: true },
       startup_id: { type: DataTypes.STRING(30), allowNull: true },
+      project_id: { type: DataTypes.STRING(30), allowNull: true },
+      org_id: { type: DataTypes.STRING(50), allowNull: true },
       rating: { type: DataTypes.STRING(20), allowNull: true },
       comment: { type: DataTypes.STRING(100), allowNull: true },
       images: { type: DataTypes.TEXT("long"), allowNull: true },
@@ -30,6 +32,13 @@ export default (sequelize, DataTypes) => {
 
   TaskForm.associate = (models) => {
     TaskForm.belongsTo(models.startups, { foreignKey: "startup_id", targetKey: "startup_id", as: "startup" });
+    if (models.projects) {
+      TaskForm.belongsTo(models.projects, {
+        foreignKey: "project_id",
+        targetKey: "project_id",
+        as: "project",
+      });
+    }
     TaskForm.hasMany(models.assignee_table, {
       foreignKey: "task_id",
       sourceKey: "task_id",

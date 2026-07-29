@@ -15,6 +15,7 @@ import ensureAuthSchema from "./services/ensureAuthSchema.js";
 import ensureReportSchema from "./services/ensureReportSchema.js";
 import ensureBdSchema from "./services/ensureBdSchema.js";
 import ensureTicketsSchema from "./services/ensureTicketsSchema.js";
+import { ensureProjectSchema } from "./services/projectService.js";
 
 import userRoutes from "./routes/user.js";
 import startupsRoutes from "./routes/startups.js";
@@ -39,6 +40,7 @@ import authRoutes from "./routes/auth.js";
 import membershipRoutes from "./routes/membership.js";
 import internshipRoutes from "./routes/internship.js";
 import rolesRoutes from "./routes/roles.js";
+import projectsRoutes from "./routes/projects.js";
 import { seedDefaultOpportunities } from "./services/internshipService.js";
 import { normalizeRolesInDb } from "./services/membershipService.js";
 
@@ -85,6 +87,7 @@ models.sequelize
     await ensureReportSchema(models.sequelize);
     await ensureBdSchema(models.sequelize);
     await ensureTicketsSchema(models.sequelize);
+    await ensureProjectSchema();
     await seedDefaultOpportunities();
     try {
       const normalized = await normalizeRolesInDb();
@@ -124,6 +127,7 @@ weeklyRoutes(app);
 taskFormRoutes(app);
 statsRoutes(app);
 attendanceRoutes(app);
+projectsRoutes(app);
 notificationRoutes(app);
 commentsRoutes(app);
 clientsRoutes(app);

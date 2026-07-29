@@ -66,7 +66,8 @@ export const postExcuse = async (req, res) => {
           excuse_description ? excuse_description : excuse_type
         } has been ${
           status == "approved" ? "Approved" : "Rejected"
-        } by ${approved_by} `
+        } by ${approved_by} `,
+        { action_url: "/app/excuses" }
       );
     }
     res.json({ success: true, data });

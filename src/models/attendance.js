@@ -73,8 +73,9 @@ export default (sequelize, DataTypes) => {
 
   Attendance.associate = function (models) {
     Attendance.belongsTo(models.users, {
-      foreignKey: 'user_id',
-      as: 'users',
+      foreignKey: "user_id",
+      targetKey: "user_id",
+      as: "users",
     });
   };
 
