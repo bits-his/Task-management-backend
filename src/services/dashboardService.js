@@ -158,6 +158,31 @@ async function getRecentTasks({
   }));
 }
 
+async function getRecentProjects({ org_id, user_id, role, limit = 6 }) {
+  if (!org_id) return [];
+  try {
+    const { listProjects } = await import("./projectService.js");
+    const rows = await listProjects({
+      org_id,
+      startup_id: null,
+      user_id,
+      role,
+      status: "active",
+    });
+    return (rows || []).slice(0, limit).map((p) => ({
+      project_id: p.project_id,
+      name: p.name || "Untitled project",
+      status: p.status || "active",
+      start_date: p.start_date || null,
+      due_date: p.due_date || null,
+      due_label: formatDueLabel(p.due_date),
+      member_count: p.member_count ?? p.members_count ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 async function getStartupPerformanceTable() {
   const startups = await db.startups.findAll({ raw: true });
 
@@ -413,7 +438,9 @@ async function buildOrgAdminDashboard(
   functionalities,
   department,
   profile = "org_admin",
-  org_id = null
+  org_id = null,
+  user_id = null,
+  role = "admin"
 ) {
   const startupWhere = org_id ? { org_id } : {};
   const counts = await countTasksByStatus();
@@ -422,6 +449,12 @@ async function buildOrgAdminDashboard(
   const pending_users = await countPendingUsers(org_id);
   const weekly_reports = await getWeeklyReportsCount();
   const attendance_rate = await getAttendanceRate();
+  const projects = await getRecentProjects({
+    org_id,
+    user_id,
+    role: role || (profile === "org_manager" ? "manager" : "admin"),
+    limit: 6,
+  });
   const signals = await getOpsSignals(org_id);
   const isManager = profile === "org_manager";
 
@@ -587,6 +620,7 @@ async function buildOrgAdminDashboard(
         value: parseInt(r.count, 10) || 0,
       })),
       startup_performance,
+      projects,
       quick_actions: buildQuickActions(functionalities, profile),
       focus: isManager ? "operations" : "oversight",
     },
@@ -747,6 +781,13 @@ async function buildStartupDashboard({
     limit: profile === "member" ? 10 : 6,
   });
 
+  const projects = await getRecentProjects({
+    org_id,
+    user_id,
+    role,
+    limit: 6,
+  });
+
   const kpis =
     profile === "member"
       ? [
@@ -839,6 +880,7 @@ async function buildStartupDashboard({
         profile: m.profile,
       })),
       recent_tasks,
+      projects,
       startup_performance:
         profile === "startup_executive"
           ? await getStartupPerformanceTable().then((rows) =>
@@ -870,7 +912,14 @@ export async function getDashboardSummary(params = {}) {
   );
 
   if (profile === "org_admin" || profile === "org_manager") {
-    return buildOrgAdminDashboard(functionalities, department, profile, org_id);
+    return buildOrgAdminDashboard(
+      functionalities,
+      department,
+      profile,
+      org_id,
+      user_id,
+      role
+    );
   }
 
   if (profile === "siwes" && user_id) {
@@ -900,6 +949,12 @@ export async function getDashboardSummary(params = {}) {
       user_id,
       personalOnly: true,
       limit: 10,
+    });
+    const projects = await getRecentProjects({
+      org_id,
+      user_id,
+      role,
+      limit: 6,
     });
 
     return withMeta(
@@ -931,6 +986,7 @@ export async function getDashboardSummary(params = {}) {
         ],
         chart_data: toChartRows(personalCounts),
         recent_tasks,
+        projects,
         quick_actions: buildQuickActions(functionalities, "member"),
       },
       { profile: "member", department, access_to: functionalities }

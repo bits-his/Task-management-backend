@@ -1,7 +1,9 @@
 import db from "../models/index.js";
 import webSocketService from "../services/webSocketService.js";
+import { sendPushToUsers } from "./pushController.js";
 
 let schemaReady = false;
+let backfillDone = false;
 
 async function ensureNotificationSchema() {
   if (schemaReady) return;
@@ -17,8 +19,30 @@ async function ensureNotificationSchema() {
   schemaReady = true;
 }
 
+/** Fill missing action_url on legacy rows with best-effort defaults. */
+async function backfillActionUrls() {
+  if (backfillDone) return;
+  try {
+    await db.sequelize.query(`
+      UPDATE notification_table
+      SET action_url = CASE
+        WHEN LOWER(CONCAT(IFNULL(notification_type,''), ' ', IFNULL(title,''))) LIKE '%excuse%'
+          THEN '/app/excuses'
+        WHEN LOWER(CONCAT(IFNULL(notification_type,''), ' ', IFNULL(title,''))) LIKE '%project%'
+          THEN '/app/projects'
+        ELSE '/app/tasks'
+      END
+      WHERE action_url IS NULL OR TRIM(action_url) = ''
+    `);
+  } catch (err) {
+    console.log("notification action_url backfill:", err?.message || err);
+  }
+  backfillDone = true;
+}
+
 /**
  * Create one notification per user with optional deep link.
+ * Also emits WS + web-push when subscriptions exist.
  * @param {string} notif_type
  * @param {string|string[]} user_id - single id, csv, or array
  * @param {string} title
@@ -59,6 +83,13 @@ export const CreateNotifications = (
         })
       )
     )
+    .then(() =>
+      sendPushToUsers(ids, {
+        title,
+        body: message,
+        url: action_url,
+      })
+    )
     .catch((err) => console.log(err));
 };
 
@@ -67,6 +98,7 @@ export const getNotifications = (req, res) => {
 
   const run = async () => {
     await ensureNotificationSchema();
+    await backfillActionUrls();
     if (type === "fetchNotifications") {
       return db.notification_table.findAll({
         where: { user_id },
@@ -102,6 +134,7 @@ export const updateNotifications = (req, res) => {
 
   const run = async () => {
     await ensureNotificationSchema();
+    await backfillActionUrls();
     if (type === "markAsRead") {
       await db.notification_table.update(
         { status: "read" },

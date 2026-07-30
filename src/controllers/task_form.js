@@ -115,6 +115,7 @@ async function handleTaskQuery(params) {
     org_id = null,
     submitted_at = null,
     images = "",
+    images_keep = undefined,
     subtasks = null,
   } = params;
 
@@ -295,7 +296,17 @@ async function handleTaskQuery(params) {
         if (description != null) fields.description = description;
         if (status != null) fields.status = status;
         if (assigned_to != null) fields.assigned_to = assigned_to;
-        if (images != null && String(images).trim() !== "") {
+        if (images_keep !== undefined) {
+          const kept = String(images_keep || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const uploaded = String(images || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          fields.images = [...kept, ...uploaded].join(",");
+        } else if (images != null && String(images).trim() !== "") {
           const existing = await db.task_form.findOne({
             where: { task_id: resolvedTaskId },
             attributes: ["images"],
@@ -465,6 +476,7 @@ const task_form = async (req, res) => {
       org_id = null,
       submitted_at = null,
       subtasks = null,
+      images_keep = undefined,
     } = req.body;
 
     let images = [];
@@ -494,6 +506,7 @@ const task_form = async (req, res) => {
       org_id,
       submitted_at,
       images: images.join(","),
+      images_keep,
       subtasks:
         query_type === "reassign" || query_type === "update-status"
           ? null
@@ -708,6 +721,51 @@ export const updateAssignee = async (req, res) => {
       new_assignees,
       rating: rating || null,
     });
+
+    try {
+      const task = await db.task_form.findOne({
+        where: { task_id },
+        attributes: ["task_id", "title", "created_by", "assigned_to"],
+        raw: true,
+      });
+      if (task) {
+        const action_url = `/app/tasks/view-task/${task.task_id}`;
+        const label = String(status || "updated").replace(/([A-Z])/g, " $1");
+        if (status === "underReview" && task.created_by) {
+          CreateNotifications(
+            "Task",
+            task.created_by,
+            "Task review needed",
+            `A task was submitted for your review${
+              task.title ? `: ${task.title}` : ""
+            }.`,
+            { action_url }
+          );
+        } else if (task.created_by && task.created_by !== user_id) {
+          CreateNotifications(
+            "Task",
+            task.created_by,
+            "Task status updated",
+            `${task.title || "A task"} is now ${label.trim()}.`,
+            { action_url }
+          );
+        }
+        if (new_assignees) {
+          CreateNotifications(
+            "Task",
+            new_assignees,
+            "Task reassigned",
+            `A task was assigned to you${
+              task.title ? `: ${task.title}` : ""
+            }.`,
+            { action_url }
+          );
+        }
+      }
+    } catch (notifErr) {
+      console.log("updateAssignee notify:", notifErr?.message || notifErr);
+    }
+
     res.json({ success: true, data: [{ task_id }] });
   } catch (err) {
     console.log(err);

@@ -53,7 +53,25 @@ export async function ensureProjectSchema() {
   } catch {
     /* exists */
   }
+  for (const col of ["start_date", "due_date"]) {
+    try {
+      await qi.addColumn("projects", col, {
+        type: Sequelize.DATEONLY,
+        allowNull: true,
+      });
+    } catch {
+      /* exists */
+    }
+  }
   schemaReady = true;
+}
+
+function toDateOnly(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const s = String(value).trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  return s;
 }
 
 function generateProjectId() {
@@ -161,10 +179,18 @@ export async function createProject({
   description = null,
   created_by,
   startup_id = null,
+  start_date = null,
+  due_date = null,
 }) {
   await ensureProjectSchema();
   if (!org_id || !name?.trim()) {
     throw new Error("org_id and name are required");
+  }
+
+  const start = toDateOnly(start_date) ?? null;
+  const due = toDateOnly(due_date) ?? null;
+  if (start && due && due < start) {
+    throw new Error("Due date must be on or after the start date");
   }
 
   const project_id = generateProjectId();
@@ -176,6 +202,8 @@ export async function createProject({
         startup_id: startup_id || null,
         name: name.trim(),
         description: description || null,
+        start_date: start,
+        due_date: due,
         status: "active",
         created_by: created_by || null,
       },
@@ -209,6 +237,12 @@ export async function updateProject(projectId, updates = {}) {
   const patch = {};
   if (updates.name != null) patch.name = String(updates.name).trim();
   if (updates.description !== undefined) patch.description = updates.description;
+  if (updates.start_date !== undefined) {
+    patch.start_date = toDateOnly(updates.start_date);
+  }
+  if (updates.due_date !== undefined) {
+    patch.due_date = toDateOnly(updates.due_date);
+  }
   if (updates.status != null) {
     const next = String(updates.status).trim().toLowerCase();
     if (!PROJECT_STATUSES.includes(next)) {
@@ -217,6 +251,13 @@ export async function updateProject(projectId, updates = {}) {
       );
     }
     patch.status = next;
+  }
+
+  const nextStart =
+    patch.start_date !== undefined ? patch.start_date : row.start_date;
+  const nextDue = patch.due_date !== undefined ? patch.due_date : row.due_date;
+  if (nextStart && nextDue && String(nextDue) < String(nextStart)) {
+    throw new Error("Due date must be on or after the start date");
   }
 
   await row.update(patch);
@@ -329,23 +370,15 @@ export async function getProjectMemberUserIds(projectId) {
   return rows.map((r) => r.user_id);
 }
 
-/**
- * Project report for the Projects module.
- * Task stats are optional (rows may have project_id from API); Tasks UI stays independent.
- */
-export async function getProjectReport(projectId) {
+/** Task progress counts for a project overview (replaces legacy report). */
+export async function getProjectTaskStats(projectId) {
   await ensureProjectSchema();
   const project = await getProjectById(projectId);
   if (!project) throw new Error("Project not found");
 
-  const members = await listProjectMembers(projectId);
-  const leads = members.filter((m) => m.role === "lead").length;
-  const contributors = members.length - leads;
-
   const tasks = {
     total: 0,
     by_status: {},
-    linked: false,
   };
 
   try {
@@ -363,23 +396,9 @@ export async function getProjectReport(projectId) {
       tasks.by_status[key] = count;
       tasks.total += count;
     }
-    tasks.linked = tasks.total > 0;
   } catch {
-    /* project_id column missing or query failed — report still useful */
+    /* project_id column missing or query failed */
   }
 
-  return {
-    project_id: project.project_id,
-    name: project.name,
-    status: project.status,
-    created_at: project.created_at,
-    updated_at: project.updated_at,
-    members: {
-      total: members.length,
-      leads,
-      contributors,
-      roster: members,
-    },
-    tasks,
-  };
+  return tasks;
 }

@@ -8,6 +8,8 @@ export default (sequelize, DataTypes) => {
       startup_id: { type: DataTypes.STRING(50), allowNull: true },
       name: { type: DataTypes.STRING(200), allowNull: false },
       description: { type: DataTypes.TEXT("long"), allowNull: true },
+      start_date: { type: DataTypes.DATEONLY, allowNull: true },
+      due_date: { type: DataTypes.DATEONLY, allowNull: true },
       status: {
         type: DataTypes.STRING(20),
         allowNull: false,

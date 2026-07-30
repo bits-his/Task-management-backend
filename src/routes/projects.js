@@ -3,7 +3,7 @@ import {
   getMembers,
   getProject,
   getProjects,
-  getReport,
+  getTaskStats,
   patchMember,
   patchProject,
   postMember,
@@ -14,7 +14,7 @@ import {
 export default (app) => {
   app.get("/api/projects", getProjects);
   app.post("/api/projects", postProject);
-  app.get("/api/projects/:id/report", getReport);
+  app.get("/api/projects/:id/task-stats", getTaskStats);
   app.get("/api/projects/:id/members", getMembers);
   app.post("/api/projects/:id/members", postMember);
   app.patch("/api/projects/:id/members/:userId", patchMember);

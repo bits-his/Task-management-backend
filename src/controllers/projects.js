@@ -5,7 +5,7 @@ import {
   createProject,
   deleteProject,
   getProjectById,
-  getProjectReport,
+  getProjectTaskStats,
   listProjectMembers,
   listProjects,
   removeProjectMember,
@@ -57,6 +57,8 @@ export async function postProject(req, res) {
       description = null,
       created_by,
       role = "",
+      start_date = null,
+      due_date = null,
     } = req.body;
 
     if (!canCreateProjects(role)) {
@@ -73,6 +75,8 @@ export async function postProject(req, res) {
       description,
       created_by,
       startup_id: null,
+      start_date,
+      due_date,
     });
 
     return res.status(201).json({ success: true, data });
@@ -289,7 +293,7 @@ export async function deleteMember(req, res) {
   }
 }
 
-export async function getReport(req, res) {
+export async function getTaskStats(req, res) {
   try {
     const { id } = req.params;
     const { user_id = "", role = "" } = req.query;
@@ -297,13 +301,13 @@ export async function getReport(req, res) {
     if (!ok) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
-    const data = await getProjectReport(id);
+    const data = await getProjectTaskStats(id);
     return res.json({ success: true, data });
   } catch (error) {
-    console.error("getReport error:", error);
+    console.error("getTaskStats error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to load project report",
+      message: error.message || "Failed to load task stats",
     });
   }
 }
