@@ -114,7 +114,7 @@ const USER_FUNCS =
   "Org Members,Add User,Departments,Startups,Organization Chart";
 const APP_FUNCS = "Applications,Opportunities";
 const OPS_FUNCS =
-  "Clients,Market Research,Outreach,Schedule Meeting,PartnerShip,Deals,Sales Performance,Invoice Processing,Payroll Management,Finance Dashboard,Content Development";
+  "Clients,Market Research,Outreach,Schedule Meeting,PartnerShip,Deals,Sales Performance,Invoice Processing,Payroll Management,Finance Dashboard,Content Development,Assets";
 
 const ADMIN_ACCESS = [
   NAV.DASHBOARD,
@@ -150,7 +150,7 @@ export const ROLE_ACCESS_PRESETS = {
       NAV.OPERATIONS,
       NAV.TICKET,
     ].join(","),
-    functionalities: `${WORK_FUNCS},Invoice Processing,Payroll Management,Finance Dashboard`,
+    functionalities: `${WORK_FUNCS},Invoice Processing,Payroll Management,Finance Dashboard,Assets`,
   },
   ceos: {
     access_to: [
