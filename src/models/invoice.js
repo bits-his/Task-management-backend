@@ -20,7 +20,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: "pending",
       },
-      // Must match banks.id (INTEGER) — VARCHAR broke InnoDB FK sync
+      // Must match banks.id (INTEGER) VARCHAR broke InnoDB FK sync
       bank_id: { type: DataTypes.INTEGER, allowNull: false },
       inv_category: { type: DataTypes.STRING(100), allowNull: false },
     },

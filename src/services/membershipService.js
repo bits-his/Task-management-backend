@@ -204,7 +204,7 @@ export async function syncLegacyUserToMembership(userRow) {
   const existing = await db.user_memberships.count({ where: { user_id } });
   if (existing > 0) return;
 
-  // Pending accounts get memberships on approve — do not invent context here
+  // Pending accounts get memberships on approve do not invent context here
   if (String(userRow.status || "").toLowerCase() !== "approved") return;
 
   const org_id = userRow.org_id || "1";
@@ -284,7 +284,7 @@ export async function migrateAllUsersToMemberships() {
     return;
   }
 
-  // Columns already removed — ensure Approved users still have at least one membership
+  // Columns already removed ensure Approved users still have at least one membership
   const users = await db.users.findAll({
     where: { status: "Approved" },
     attributes: ["user_id", "org_id", "status"],

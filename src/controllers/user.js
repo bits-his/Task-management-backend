@@ -159,7 +159,7 @@ const create = async (req, res) => {
     const verifyRaw = createToken();
     const hash = await bcrypt.hash(password, 10);
 
-    // Account identity only — role/context is assigned on admin approve via user_memberships
+    // Account identity only role/context is assigned on admin approve via user_memberships
     const createdUser = await User.create({
       user_id: userId,
       fullname,
@@ -625,9 +625,16 @@ const deleteUser = (req, res) => {
 };
 
 const verifyUserToken = async (req, res) => {
-  const authToken = req.headers["authorization"];
-  const token = authToken.split(" ")[1];
-  // console.log(token)
+  const authHeader = (req.headers["authorization"] || "").trim();
+  if (!authHeader) {
+    return res.json({ success: false, message: "No token provided" });
+  }
+  const token = authHeader.toLowerCase().startsWith("bearer ")
+    ? authHeader.slice(7).trim()
+    : authHeader;
+  if (!token) {
+    return res.json({ success: false, message: "No token provided" });
+  }
   let decoded;
   try {
     decoded = await jwt.verify(token, "secret");
@@ -1028,7 +1035,7 @@ const reactivateUser = async (req, res) => {
     }
 
     const current = String(user.status || "").toLowerCase();
-    // Only reactivate deactivated / suspended — pending must go through approve with role
+    // Only reactivate deactivated / suspended pending must go through approve with role
     if (!["deactivated", "suspended"].includes(current)) {
       return res.status(400).json({
         success: false,

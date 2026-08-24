@@ -19,6 +19,11 @@ import {
   updatePlacementForUser,
   updatePlacement,
   seedDefaultOpportunities,
+  getMyApplicationDetail,
+  resubmitApplication,
+  grantApplicantPortalAccess,
+  getResubmitApplicationDetail,
+  resubmitApplicationByToken,
 } from "../services/internshipService.js";
 
 export async function getOpportunities(req, res) {
@@ -229,5 +234,59 @@ export async function bootstrapInternship(req, res) {
     res.json({ success: true, message: "Internship module seeded" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function getMyApplication(req, res) {
+  try {
+    const userId = req.user?.user_id || req.user?.dataValues?.user_id;
+    const data = await getMyApplicationDetail(userId);
+    if (!data) {
+      return res.status(404).json({ success: false, message: "No application found" });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function resubmitMyApplication(req, res) {
+  try {
+    const userId = req.user?.user_id || req.user?.dataValues?.user_id;
+    const data = await resubmitApplication(userId, req.body, req.files || []);
+    res.json({ success: true, data, message: "Application resubmitted" });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+}
+
+export async function adminGrantPortalAccess(req, res) {
+  try {
+    const data = await grantApplicantPortalAccess(req.params.id);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+}
+
+export async function getResubmitApplication(req, res) {
+  try {
+    const data = await getResubmitApplicationDetail(req.params.token);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+}
+
+export async function postResubmitApplication(req, res) {
+  try {
+    const data = await resubmitApplicationByToken(
+      req.params.token,
+      req.body,
+      req.files || []
+    );
+    res.json({ success: true, data, message: "Application resubmitted" });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 }

@@ -5,7 +5,7 @@ import { normalizeRolesInDb } from "../services/membershipService.js";
 const jwt = passport.authenticate("jwt", { session: false });
 
 export default (app) => {
-  /** Canonical org-wide roles — single source of truth for forms & departments */
+  /** Canonical org-wide roles single source of truth for forms & departments */
   app.get("/api/roles", (_req, res) => {
     res.json({
       success: true,

@@ -1,8 +1,12 @@
 import crypto from "crypto";
-import transporter from "../config/nodemailer.js";
+import transporter, { hasSmtpAuth } from "../config/nodemailer.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5100";
 const FROM_EMAIL = process.env.MAIL_FROM || '"Brainstorm Ops" <noreply@brainstorm.ng>';
+
+export function isMailConfigured() {
+  return hasSmtpAuth;
+}
 
 export function createToken(bytes = 32) {
   return crypto.randomBytes(bytes).toString("hex");
@@ -13,6 +17,15 @@ export function hashToken(token) {
 }
 
 export async function sendMail({ to, subject, html, text }) {
+  if (!hasSmtpAuth) {
+    console.warn(
+      "[mail] SMTP_USER/SMTP_PASS not set skipping email to:",
+      to,
+      subject
+    );
+    return { skipped: true, to, subject };
+  }
+
   return transporter.sendMail({
     from: FROM_EMAIL,
     to,
@@ -97,10 +110,10 @@ export async function sendPlacementWelcomeEmail(user, temporaryPassword, meta = 
   const typeLabel = (meta.application_type || "placement").replace(/_/g, " ");
   return sendMail({
     to: user.email,
-    subject: "Welcome to Brainstorm — your placement account",
+    subject: "Welcome to Brainstorm your placement account",
     html: `
       <p>Hi ${user.fullname || "there"},</p>
-      <p>Congratulations — your <strong>${typeLabel}</strong> application has been accepted.</p>
+      <p>Congratulations your <strong>${typeLabel}</strong> application has been accepted.</p>
       <p>We created your Brainstorm workspace account. Use these details to sign in:</p>
       <p><strong>Login page:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
       <p><strong>Email:</strong> ${user.email}</p>
@@ -117,7 +130,7 @@ export async function sendPlacementWelcomeEmail(user, temporaryPassword, meta = 
     `,
     text: `Hi ${user.fullname || "there"},
 
-Congratulations — your ${typeLabel} application has been accepted.
+Congratulations your ${typeLabel} application has been accepted.
 
 Login: ${loginUrl}
 Email: ${user.email}

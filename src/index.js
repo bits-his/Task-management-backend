@@ -17,6 +17,7 @@ import ensureBdSchema from "./services/ensureBdSchema.js";
 import ensureTicketsSchema from "./services/ensureTicketsSchema.js";
 import { ensureProjectSchema } from "./services/projectService.js";
 import { ensureAssetSchema } from "./services/assetService.js";
+import ensureInternshipSchema from "./services/ensureInternshipSchema.js";
 
 import userRoutes from "./routes/user.js";
 import startupsRoutes from "./routes/startups.js";
@@ -63,6 +64,10 @@ const allowedOrigins = [
 
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  "/uploads/internship",
+  express.static(path.join(__dirname, "../uploads/internship"))
+);
 
 app.use(
   cors({
@@ -91,6 +96,7 @@ models.sequelize
     await ensureTicketsSchema(models.sequelize);
     await ensureProjectSchema();
     await ensureAssetSchema();
+    await ensureInternshipSchema(models.sequelize);
     await seedDefaultOpportunities();
     try {
       const normalized = await normalizeRolesInDb();

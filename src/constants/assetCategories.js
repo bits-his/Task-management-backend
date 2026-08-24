@@ -1,4 +1,4 @@
-/** Shared with FE taxonomy — keep slugs in sync with frontend assetShared.js */
+/** Shared with FE taxonomy keep slugs in sync with frontend assetShared.js */
 export const ASSET_CATEGORY_META = {
   laptop: { label: "Laptop", assignable: true, group: "IT Equipment" },
   desktop: { label: "Desktop", assignable: true, group: "IT Equipment" },
