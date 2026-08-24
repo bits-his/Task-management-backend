@@ -520,7 +520,7 @@ const task_form = async (req, res) => {
         "Task",
         assigned_to,
         "Task assigned",
-        `New task${title ? `: ${title}` : ""} — priority ${priority || "medium"}.`,
+        `New task${title ? `: ${title}` : ""} priority ${priority || "medium"}.`,
         { action_url: taskCode ? `/app/tasks/view-task/${taskCode}` : "/app/tasks" }
       );
     } else if (query_type == "edit-task") {

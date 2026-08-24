@@ -6,7 +6,7 @@
  *   node src/seed.js
  *
  * Default password for every seeded account: Seed@12345
- * Re-running is safe — existing emails / startup_ids are skipped.
+ * Re-running is safe existing emails / startup_ids are skipped.
  */
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";

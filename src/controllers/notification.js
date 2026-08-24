@@ -162,5 +162,5 @@ export const updateNotifications = (req, res) => {
 };
 
 export default async function initNotificationWs() {
-  /* legacy WS bootstrap unused — kept for import compatibility */
+  /* legacy WS bootstrap unused kept for import compatibility */
 }

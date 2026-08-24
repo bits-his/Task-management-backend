@@ -52,6 +52,7 @@ export default (sequelize, DataTypes) => {
       state_of_deployment: { type: DataTypes.STRING(80), allowNull: true },
       highest_qualification: { type: DataTypes.STRING(120), allowNull: true },
       school: { type: DataTypes.STRING(200), allowNull: true },
+      school_state: { type: DataTypes.STRING(80), allowNull: true },
       area_of_interest: { type: DataTypes.STRING(200), allowNull: true },
       preferred_department: { type: DataTypes.STRING(120), allowNull: true },
       placement_duration: { type: DataTypes.STRING(80), allowNull: true },
@@ -66,6 +67,8 @@ export default (sequelize, DataTypes) => {
       applicant_id: { type: DataTypes.STRING(20), allowNull: true },
       activation_token_hash: { type: DataTypes.STRING(128), allowNull: true },
       activation_expires_at: { type: DataTypes.DATE, allowNull: true },
+      resubmit_token_hash: { type: DataTypes.STRING(64), allowNull: true },
+      resubmit_token_expires_at: { type: DataTypes.DATE, allowNull: true },
       submitted_at: { type: DataTypes.DATE, allowNull: true },
     },
     {

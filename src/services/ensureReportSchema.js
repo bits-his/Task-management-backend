@@ -26,7 +26,7 @@ export default async function ensureReportSchema(sequelize) {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
   } catch (err) {
-    // Table may already exist without FK, or FK may fail on bad data — still usable
+    // Table may already exist without FK, or FK may fail on bad data still usable
     if (!/already exists/i.test(err.message)) {
       console.warn("ensureReportSchema report_items:", err.message);
     }

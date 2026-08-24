@@ -95,7 +95,7 @@ export function isOrgAttendanceRole(role) {
   return ORG_ATTENDANCE_ROLES.includes(normalizeRole(role));
 }
 
-/** Nav group titles — must match frontend sidrbarModules.jsx */
+/** Nav group titles must match frontend sidrbarModules.jsx */
 export const NAV = {
   DASHBOARD: "Dashboard",
   ATTENDANCE: "Attendance",

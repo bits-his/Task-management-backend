@@ -166,7 +166,7 @@ const runDepartmentQuery = async ({
     }
 
     case "roles":
-      // Org-wide roles — not per-department. dept_id ignored.
+      // Org-wide roles not per-department. dept_id ignored.
       return ROLES.map((r) => ({
         role_id: r.id,
         role_name: r.label,

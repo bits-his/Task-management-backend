@@ -154,7 +154,7 @@ async function upsertDayReport({
   let savedItems = [];
   if (items !== undefined) {
     if (!db.report_items) {
-      throw new Error("report_items table is not available — restart the server");
+      throw new Error("report_items table is not available restart the server");
     }
     savedItems = await replaceReportItems(report.id, items);
   } else {

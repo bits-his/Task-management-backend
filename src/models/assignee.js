@@ -22,7 +22,7 @@ export default (sequelize, DataTypes) => {
   );
 
   Assignee.associate = (models) => {
-    // constraints: false — task_form.task_id is not UNIQUE/PK, so InnoDB rejects FKs
+    // constraints: false task_form.task_id is not UNIQUE/PK, so InnoDB rejects FKs
     Assignee.belongsTo(models.users, {
       foreignKey: "user_id",
       targetKey: "user_id",

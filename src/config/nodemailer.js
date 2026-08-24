@@ -17,14 +17,23 @@ const secure =
     ? String(process.env.SMTP_SECURE).toLowerCase() === "true"
     : port === 465;
 
+const smtpUser = process.env.SMTP_USER?.trim();
+const smtpPass = process.env.SMTP_PASS?.trim();
+const hasSmtpAuth = Boolean(smtpUser && smtpPass);
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port,
   secure,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
+  ...(hasSmtpAuth
+    ? {
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      }
+    : {}),
 });
 
+export { hasSmtpAuth };
 export default transporter;

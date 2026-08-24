@@ -2,6 +2,7 @@ import db from "../models/index.js";
 import Sequelize from "sequelize";
 import { getMembersForContext } from "./membershipService.js";
 import { getUserActiveEnrollment } from "./roadmapService.js";
+import { getApplicationForUser } from "./internshipService.js";
 
 const { Op, fn, col } = Sequelize;
 
@@ -649,6 +650,7 @@ async function buildSiwesDashboard({ user_id, functionalities, department }) {
     personalOnly: true,
     limit: 8,
   });
+  const application = await getApplicationForUser(user_id);
 
   let enrollment = null;
   try {
@@ -660,7 +662,10 @@ async function buildSiwesDashboard({ user_id, functionalities, department }) {
   return withMeta(
     {
       title: "SIWES workspace",
-      description: "Follow your roadmap — tasks, attendance, and weekly reports",
+      description: application?.status === "accepted"
+        ? "Your placement is active attendance, tasks, and reports"
+        : "Your application and workspace",
+      application,
       kpis: [
         {
           id: "pending",

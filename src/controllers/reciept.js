@@ -250,7 +250,7 @@ export const update_status = async (req, res) => {
 };
 
 export const generate = async (req, res) => {
-  // Legacy alias — same as generateInvoice
+  // Legacy alias same as generateInvoice
   return generateInvoice(req, res);
 };
 

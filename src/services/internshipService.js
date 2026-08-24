@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import Sequelize from "sequelize";
 import db from "../models/index.js";
+import { internshipFilePublicUrl } from "../config/internshipUpload.js";
 import { createToken, hashToken, sendMail, sendPlacementWelcomeEmail } from "./mail.js";
 
 const { Op } = Sequelize;
@@ -265,6 +266,7 @@ function parseApplicationPayload(body = {}) {
     state_of_deployment: body.state_of_deployment || null,
     highest_qualification: body.highest_qualification || null,
     school: body.school || null,
+    school_state: body.school_state || null,
     area_of_interest: body.area_of_interest || null,
     preferred_department: body.preferred_department || null,
     placement_duration: body.placement_duration || body.duration || null,
@@ -357,15 +359,16 @@ export async function submitApplication(body, files = []) {
   const docRows = [];
   for (const file of files) {
     const docType = file.fieldname || "document";
+    const fileUrl = internshipFilePublicUrl(file);
     docRows.push({
       application_id: application.id,
       document_type: docType,
-      file_url: file.path || file.location,
+      file_url: fileUrl,
       file_name: file.originalname,
       is_required: !String(docType).startsWith("optional_"),
     });
-    if (docType === "passport" && file.path) {
-      await person.update({ passport_url: file.path });
+    if (docType === "passport" && fileUrl) {
+      await person.update({ passport_url: fileUrl });
     }
   }
 
@@ -380,17 +383,21 @@ export async function submitApplication(body, files = []) {
     metadata: { status: "submitted" },
   });
 
-  await sendMail({
-    to: person.email,
-    subject: "Application received — Brainstorm Internship & Placement",
-    html: `
+  try {
+    await sendMail({
+      to: person.email,
+      subject: "Application received Brainstorm Internship & Placement",
+      html: `
       <p>Hi ${person.fullname},</p>
       <p>We received your ${appData.application_type.replace(/_/g, " ")} application.</p>
       <p><strong>Reference number:</strong> ${application.application_code}</p>
       <p><strong>Tracking code:</strong> ${application.tracking_code}</p>
       <p>Track your application at <a href="${FRONTEND_URL}/internship/track">${FRONTEND_URL}/internship/track</a></p>
     `,
-  });
+    });
+  } catch (err) {
+    console.error("[internship] application confirmation email failed:", err.message);
+  }
 
   if (appData.opportunity_id) {
     const opportunity = await getOpportunityById(appData.opportunity_id);
@@ -439,15 +446,25 @@ export async function requestTrackOtp({ application_code, email }) {
     expires_at: expires,
   });
 
-  await sendMail({
-    to: application.person.email,
-    subject: "Your application tracking code",
-    html: `
+  try {
+    const mailResult = await sendMail({
+      to: application.person.email,
+      subject: "Your application tracking code",
+      html: `
       <p>Hi ${application.person.fullname},</p>
       <p>Your one-time tracking code is: <strong>${rawOtp}</strong></p>
       <p>This code expires in 15 minutes.</p>
     `,
-  });
+    });
+    if (mailResult?.skipped) {
+      console.warn(
+        `[internship] SMTP not configured. OTP for ${application.person.email}: ${rawOtp}`
+      );
+    }
+  } catch (err) {
+    console.error("[internship] tracking OTP email failed:", err.message);
+    throw new Error("Could not send verification code. Try again later.");
+  }
 
   return { success: true };
 }
@@ -514,6 +531,31 @@ export async function verifyTrackOtp({ application_code, email, otp }) {
     raw: true,
   });
 
+  let placementInfo = {};
+  if (["accepted", "completed"].includes(application.status)) {
+    const placement = await db.internship_placement.findOne({
+      where: { application_id: application.id },
+      order: [["id", "DESC"]],
+    });
+    if (placement) {
+      const plain = placement.get({ plain: true });
+      placementInfo = {
+        office_days: normalizeOfficeDays(plain.office_days),
+        placement_start_date: plain.start_date || null,
+        placement_end_date: plain.end_date || null,
+      };
+    }
+  }
+
+  const can_resubmit = await computeCanResubmit(
+    application.get({ plain: true })
+  );
+
+  let resubmit_token = null;
+  if (application.status === "rejected" && can_resubmit) {
+    resubmit_token = await issueResubmitToken(application, 72);
+  }
+
   return {
     application: {
       application_code: application.application_code,
@@ -524,6 +566,8 @@ export async function verifyTrackOtp({ application_code, email, otp }) {
       expected_end_date: application.expected_end_date,
       interview_scheduled_at: application.interview_scheduled_at,
       rejection_reason: application.rejection_reason,
+      can_resubmit,
+      ...placementInfo,
     },
     documents: application.documents,
     timeline: buildStatusTimeline(application, application.logs),
@@ -535,6 +579,7 @@ export async function verifyTrackOtp({ application_code, email, otp }) {
       status: a.status,
       submitted_at: a.submitted_at,
     })),
+    resubmit_token,
   };
 }
 
@@ -543,15 +588,20 @@ export async function listApplications(filters = {}) {
   if (filters.status) where.status = filters.status;
   if (filters.application_type) where.application_type = filters.application_type;
   if (filters.search) {
+    const q = `%${filters.search}%`;
     where[Op.or] = [
-      { application_code: { [Op.like]: `%${filters.search}%` } },
-      { preferred_department: { [Op.like]: `%${filters.search}%` } },
+      { application_code: { [Op.like]: q } },
+      { preferred_department: { [Op.like]: q } },
+      Sequelize.where(Sequelize.col("person.fullname"), { [Op.like]: q }),
+      Sequelize.where(Sequelize.col("person.email"), { [Op.like]: q }),
+      Sequelize.where(Sequelize.col("person.phone_number"), { [Op.like]: q }),
     ];
   }
 
   const rows = await db.internship_application.findAll({
     where,
     include: [{ model: db.internship_person, as: "person" }],
+    subQuery: false,
     order: [["submitted_at", "DESC"]],
     limit: Math.min(Number(filters.limit) || 50, 100),
     offset: Number(filters.offset) || 0,
@@ -628,7 +678,7 @@ export async function updateApplicationStatus(ref, payload, authorUserId) {
 
   if (payload.status === "accepted" && application.status !== "accepted") {
     throw new Error(
-      "Use Approve to accept — that creates the account and emails a temporary password."
+      "Use Approve to accept that creates the account and emails a temporary password."
     );
   }
 
@@ -702,30 +752,9 @@ export async function approveApplication(ref, payload, authorUserId) {
 
   const person = application.person;
   if (!person?.email) throw new Error("Applicant email is missing");
-  if (person.user_id) {
-    throw new Error("This applicant already has a platform account");
-  }
-
-  const existing = await db.users.findOne({
-    where: { email: person.email },
-  });
-  if (existing) {
-    throw new Error(
-      "An account with this email already exists. Link or resolve the duplicate first."
-    );
-  }
-
-  // phone_no is unique on users — skip if another member already has it
-  let phoneNo = person.phone_number || null;
-  if (phoneNo) {
-    const phoneTaken = await db.users.findOne({
-      where: { phone_no: phoneNo },
-    });
-    if (phoneTaken) phoneNo = null;
-  }
 
   const id = application.id;
-  const applicantId = await generateApplicantId();
+  const applicantId = application.applicant_id || (await generateApplicantId());
   const officeDays = normalizeOfficeDays(payload.office_days);
   const startDate = payload.start_date || application.expected_start_date;
   const endDate = payload.end_date || application.expected_end_date;
@@ -742,25 +771,78 @@ export async function approveApplication(ref, payload, authorUserId) {
 
   const role = roleFromApplicationType(application.application_type);
   const preset = getRoleAccessPreset(role);
-  const userId = await nextUserId(role === "siwes" ? "SIW" : "INT");
-  const temporaryPassword = createToken(5);
-  const hash = await bcrypt.hash(temporaryPassword, 10);
   const orgId = "1";
 
-  await db.users.create({
-    user_id: userId,
-    fullname: person.fullname,
-    email: person.email,
-    phone_no: phoneNo,
-    address: person.residential_address || "",
-    password: hash,
-    status: "Approved",
-    org_id: orgId,
-    starting_date: startDate || null,
-    end_date: endDate || null,
-    profile: person.passport_url || null,
-    email_verified: true,
-  });
+  let userId = person.user_id ? String(person.user_id) : null;
+  let temporaryPassword = null;
+  let existingPortalAccount = false;
+
+  if (userId) {
+    existingPortalAccount = true;
+    const linkedUser = await db.users.findOne({ where: { user_id: userId } });
+    if (!linkedUser) throw new Error("Linked platform account not found");
+    const activePlacement = await db.internship_placement.findOne({
+      where: {
+        person_id: person.id,
+        status: { [Op.in]: ["pending", "active"] },
+      },
+    });
+    if (activePlacement) {
+      throw new Error("Applicant already has an active placement");
+    }
+  } else {
+    const existing = await db.users.findOne({
+      where: { email: person.email },
+    });
+    if (existing) {
+      userId = String(existing.user_id);
+      existingPortalAccount = true;
+      await person.update({ user_id: userId });
+    }
+  }
+
+  let phoneNo = person.phone_number || null;
+  if (phoneNo) {
+    const phoneTaken = await db.users.findOne({
+      where: { phone_no: phoneNo, user_id: { [Op.ne]: userId || "" } },
+    });
+    if (phoneTaken) phoneNo = null;
+  }
+
+  if (!userId) {
+    userId = await nextUserId(role === "siwes" ? "SIW" : "INT");
+    temporaryPassword = createToken(5);
+    const hash = await bcrypt.hash(temporaryPassword, 10);
+
+    await db.users.create({
+      user_id: userId,
+      fullname: person.fullname,
+      email: person.email,
+      phone_no: phoneNo,
+      address: person.residential_address || "",
+      password: hash,
+      status: "Approved",
+      org_id: orgId,
+      starting_date: startDate || null,
+      end_date: endDate || null,
+      profile: person.passport_url || null,
+      email_verified: true,
+    });
+
+    await person.update({ user_id: userId });
+  } else {
+    await db.users.update(
+      {
+        fullname: person.fullname,
+        phone_no: phoneNo,
+        address: person.residential_address || "",
+        starting_date: startDate || null,
+        end_date: endDate || null,
+        profile: person.passport_url || null,
+      },
+      { where: { user_id: userId } }
+    );
+  }
 
   await upsertMembership({
     user_id: userId,
@@ -820,7 +902,7 @@ export async function approveApplication(ref, payload, authorUserId) {
     application_id: id,
     author_user_id: authorUserId || null,
     log_type: "status_change",
-    content: "Application accepted — account created with temporary password",
+    content: "Application accepted account created with temporary password",
     metadata: {
       status: "accepted",
       applicant_id: applicantId,
@@ -833,14 +915,27 @@ export async function approveApplication(ref, payload, authorUserId) {
   let emailSent = false;
   let emailError = null;
   try {
-    await sendPlacementWelcomeEmail(
-      { email: person.email, fullname: person.fullname },
-      temporaryPassword,
-      {
-        application_type: application.application_type,
-        applicant_id: applicantId,
-      }
-    );
+    if (existingPortalAccount) {
+      await sendMail({
+        to: person.email,
+        subject: "Your placement has been accepted — Brainstorm",
+        html: `
+          <p>Hi ${person.fullname},</p>
+          <p>Congratulations your application has been accepted.</p>
+          <p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> with your existing account to access attendance, tasks, and reports.</p>
+          ${applicantId ? `<p><strong>Applicant ID:</strong> ${applicantId}</p>` : ""}
+        `,
+      });
+    } else {
+      await sendPlacementWelcomeEmail(
+        { email: person.email, fullname: person.fullname },
+        temporaryPassword,
+        {
+          application_type: application.application_type,
+          applicant_id: applicantId,
+        }
+      );
+    }
     emailSent = true;
   } catch (err) {
     emailError = err.message || "Email failed";
@@ -875,12 +970,236 @@ export async function approveApplication(ref, payload, authorUserId) {
   };
 }
 
+async function maybeReopenOpportunityAfterRejection(opportunityId) {
+  if (!opportunityId) return;
+  const opportunity = await getOpportunityById(opportunityId);
+  if (
+    opportunity &&
+    opportunity.slots > 0 &&
+    opportunity.slots_remaining != null &&
+    opportunity.slots_remaining > 0 &&
+    opportunity.status === "closed"
+  ) {
+    await db.internship_opportunity.update(
+      { status: "open" },
+      { where: { id: opportunity.id } }
+    );
+  }
+}
+
+async function issueResubmitToken(application, hoursValid = 72) {
+  const token = createToken(24);
+  await application.update({
+    resubmit_token_hash: hashToken(token),
+    resubmit_token_expires_at: new Date(
+      Date.now() + hoursValid * 60 * 60 * 1000
+    ),
+  });
+  return token;
+}
+
+async function clearResubmitToken(application) {
+  await application.update({
+    resubmit_token_hash: null,
+    resubmit_token_expires_at: null,
+  });
+}
+
+async function findApplicationByResubmitToken(token) {
+  if (!token) return null;
+  return db.internship_application.findOne({
+    where: {
+      resubmit_token_hash: hashToken(String(token)),
+      resubmit_token_expires_at: { [Op.gt]: new Date() },
+    },
+    include: [
+      { model: db.internship_person, as: "person" },
+      { model: db.internship_application_document, as: "documents" },
+      { model: db.internship_opportunity, as: "opportunity" },
+    ],
+  });
+}
+
+async function computeCanResubmit(application) {
+  if (!application || application.status !== "rejected") return false;
+  if (!application.opportunity_id) return true;
+  const opp = await getOpportunityById(application.opportunity_id);
+  if (!opp) return false;
+  if (
+    opp.slots > 0 &&
+    opp.slots_remaining != null &&
+    opp.slots_remaining <= 0
+  ) {
+    return false;
+  }
+  if (opp.status === "open") return true;
+  if (opp.slots > 0 && opp.slots_remaining > 0) return true;
+  return false;
+}
+
+/** Create or link a platform login so rejected applicants can update and resubmit. */
+async function ensureApplicantPortalAccount(person, application) {
+  if (!person?.email) return null;
+  if (person.user_id) {
+    return { user_id: person.user_id, created: false };
+  }
+
+  const existing = await db.users.findOne({
+    where: { email: person.email },
+  });
+  if (existing) {
+    await person.update({ user_id: existing.user_id });
+    return { user_id: existing.user_id, created: false, linked: true };
+  }
+
+  const bcrypt = (await import("bcryptjs")).default;
+  const { nextUserId } = await import("./numberGenerator.js");
+  const { upsertMembership, getRoleAccessPreset } = await import(
+    "./membershipService.js"
+  );
+
+  const role = roleFromApplicationType(application.application_type);
+  const preset = getRoleAccessPreset(role);
+  const userId = await nextUserId(role === "siwes" ? "SIW" : "INT");
+  const temporaryPassword = createToken(5);
+  const hash = await bcrypt.hash(temporaryPassword, 10);
+  const orgId = "1";
+
+  let phoneNo = person.phone_number || null;
+  if (phoneNo) {
+    const phoneTaken = await db.users.findOne({ where: { phone_no: phoneNo } });
+    if (phoneTaken) phoneNo = null;
+  }
+
+  await db.users.create({
+    user_id: userId,
+    fullname: person.fullname,
+    email: person.email,
+    phone_no: phoneNo,
+    address: person.residential_address || "",
+    password: hash,
+    status: "Approved",
+    org_id: orgId,
+    profile: person.passport_url || null,
+    email_verified: true,
+  });
+
+  await upsertMembership({
+    user_id: userId,
+    org_id: orgId,
+    startup_id: null,
+    dept_id: null,
+    role,
+    access_to: preset.access_to,
+    functionalities: preset.functionalities,
+    is_primary: true,
+    status: "active",
+  });
+
+  await person.update({ user_id: userId });
+
+  let resubmitToken = null;
+  try {
+    resubmitToken = await issueResubmitToken(application, 168);
+  } catch (err) {
+    console.error("[internship] resubmit token:", err.message);
+  }
+
+  const resubmitUrl = resubmitToken
+    ? `${FRONTEND_URL}/internship/resubmit?token=${encodeURIComponent(resubmitToken)}`
+    : `${FRONTEND_URL}/internship/track`;
+
+  let emailSent = false;
+  try {
+    await sendMail({
+      to: person.email,
+      subject: "Update your application — Brainstorm Internship",
+      html: `
+        <p>Hi ${person.fullname},</p>
+        <p>Your application (${application.application_code}) was not approved in its current form.</p>
+        <p>You can review your details and resubmit if a place is still available — no password needed.</p>
+        <p><a href="${resubmitUrl}">Update &amp; resubmit your application</a></p>
+        <p>This link is private; do not share it. It expires in 7 days.</p>
+        <p>Alternatively, track your application at <a href="${FRONTEND_URL}/internship/track">${FRONTEND_URL}/internship/track</a> and verify with your email.</p>
+        <p>Optional workspace login: ${person.email}<br/>Temporary password: <strong>${temporaryPassword}</strong></p>
+      `,
+    });
+    emailSent = true;
+  } catch (err) {
+    console.error("[internship] reject portal email failed:", err.message);
+  }
+
+  return {
+    user_id: userId,
+    created: true,
+    email_sent: emailSent,
+    temporary_password: emailSent ? undefined : temporaryPassword,
+    resubmit_token: resubmitToken,
+    resubmit_url: resubmitUrl,
+  };
+}
+
+/** Admin: ensure rejected applicant has portal login (e.g. legacy rejections). */
+export async function grantApplicantPortalAccess(ref) {
+  const application = await findApplicationByRef(ref, {
+    include: [{ model: db.internship_person, as: "person" }],
+  });
+  if (!application) throw new Error("Application not found");
+  if (application.status !== "rejected") {
+    throw new Error("Portal access is only for rejected applications");
+  }
+  await maybeReopenOpportunityAfterRejection(application.opportunity_id);
+  const portal = await ensureApplicantPortalAccount(
+    application.person,
+    application
+  );
+  let resubmit_token = portal?.resubmit_token || null;
+  if (!resubmit_token) {
+    try {
+      resubmit_token = await issueResubmitToken(application, 168);
+    } catch (err) {
+      console.error("[internship] grant resubmit token:", err.message);
+    }
+  }
+  const resubmit_url = resubmit_token
+    ? `${FRONTEND_URL}/internship/resubmit?token=${encodeURIComponent(resubmit_token)}`
+    : null;
+  return { ...portal, resubmit_token, resubmit_url };
+}
+
 export async function rejectApplication(ref, reason, authorUserId) {
-  return updateApplicationStatus(
+  const application = await findApplicationByRef(ref, {
+    include: [{ model: db.internship_person, as: "person" }],
+  });
+  if (!application) throw new Error("Application not found");
+
+  const updated = await updateApplicationStatus(
     ref,
     { status: "rejected", rejection_reason: reason },
     authorUserId
   );
+
+  if (application.opportunity_id) {
+    await maybeReopenOpportunityAfterRejection(application.opportunity_id);
+  }
+
+  let portalAccount = null;
+  try {
+    portalAccount = await ensureApplicantPortalAccount(
+      application.person,
+      application
+    );
+    if (!portalAccount?.resubmit_token) {
+      const resubmit_token = await issueResubmitToken(application, 168);
+      const resubmit_url = `${FRONTEND_URL}/internship/resubmit?token=${encodeURIComponent(resubmit_token)}`;
+      portalAccount = { ...portalAccount, resubmit_token, resubmit_url };
+    }
+  } catch (err) {
+    console.error("[internship] reject portal account:", err.message);
+  }
+
+  const plain = updated.get({ plain: true });
+  return { ...plain, portal_account: portalAccount };
 }
 
 /**
@@ -1008,7 +1327,7 @@ export async function activateAccount({ token, application: applicationCode, pas
     application_id: application.id,
     author_user_id: userId,
     log_type: "status_change",
-    content: "Account activated — org membership created",
+    content: "Account activated org membership created",
     metadata: { user_id: userId, role },
   });
 
@@ -1028,6 +1347,244 @@ export async function updatePlacementOfficeDays(placementId, office_days) {
   const days = normalizeOfficeDays(office_days);
   await placement.update({ office_days: days });
   return placement;
+}
+
+/** Latest internship application for a platform user (via person.user_id). */
+export async function getApplicationForUser(userId) {
+  if (!userId) return null;
+  const person = await db.internship_person.findOne({
+    where: { user_id: String(userId) },
+  });
+  if (!person) return null;
+  const application = await db.internship_application.findOne({
+    where: { person_id: person.id },
+    order: [["submitted_at", "DESC"]],
+    raw: true,
+  });
+  if (!application) return null;
+  const can_resubmit = await computeCanResubmit(application);
+
+  let placementInfo = {};
+  if (["accepted", "completed"].includes(application.status)) {
+    const placement = await db.internship_placement.findOne({
+      where: { person_id: person.id },
+      order: [["id", "DESC"]],
+    });
+    if (placement) {
+      const plain = placement.get({ plain: true });
+      placementInfo = {
+        office_days: normalizeOfficeDays(plain.office_days),
+        placement_start_date: plain.start_date || null,
+        placement_end_date: plain.end_date || null,
+      };
+    }
+  }
+
+  return {
+    application_code: application.application_code,
+    status: application.status,
+    application_type: application.application_type,
+    preferred_department: application.preferred_department,
+    expected_start_date: application.expected_start_date,
+    rejection_reason: application.rejection_reason,
+    opportunity_id: application.opportunity_id,
+    can_resubmit,
+    ...placementInfo,
+  };
+}
+
+/** Full application detail for the logged-in applicant (resubmit form). */
+export async function getMyApplicationDetail(userId) {
+  if (!userId) return null;
+  const person = await db.internship_person.findOne({
+    where: { user_id: String(userId) },
+  });
+  if (!person) return null;
+
+  const application = await db.internship_application.findOne({
+    where: { person_id: person.id },
+    order: [["submitted_at", "DESC"]],
+    include: [
+      { model: db.internship_application_document, as: "documents" },
+      { model: db.internship_opportunity, as: "opportunity" },
+    ],
+  });
+  if (!application) return null;
+
+  const plain = application.get({ plain: true });
+  const can_resubmit = await computeCanResubmit(plain);
+
+  return {
+    person: person.get({ plain: true }),
+    application: plain,
+    can_resubmit,
+  };
+}
+
+export async function resubmitApplication(userId, body, files = []) {
+  const person = await db.internship_person.findOne({
+    where: { user_id: String(userId) },
+  });
+  if (!person) throw new Error("No application linked to your account");
+
+  const application = await db.internship_application.findOne({
+    where: { person_id: person.id },
+    order: [["submitted_at", "DESC"]],
+    include: [{ model: db.internship_application_document, as: "documents" }],
+  });
+  if (!application) throw new Error("Application not found");
+
+  return performApplicationResubmit(
+    application,
+    person,
+    body,
+    files,
+    String(userId)
+  );
+}
+
+async function performApplicationResubmit(
+  application,
+  person,
+  body,
+  files = [],
+  authorUserId = null
+) {
+  if (application.status !== "rejected") {
+    throw new Error("Only rejected applications can be resubmitted");
+  }
+
+  const canResubmit = await computeCanResubmit(application.get({ plain: true }));
+  if (!canResubmit) {
+    throw new Error("This opportunity is no longer accepting applications");
+  }
+
+  const personData = parsePersonPayload(body);
+  const appData = parseApplicationPayload(body);
+
+  if (
+    personData.email &&
+    personData.email !== person.email.toLowerCase()
+  ) {
+    throw new Error("Email cannot be changed on resubmit");
+  }
+  if (!personData.fullname || !personData.phone_number) {
+    throw new Error("Full name and phone number are required");
+  }
+
+  await person.update({
+    fullname: personData.fullname,
+    gender: personData.gender ?? person.gender,
+    date_of_birth: personData.date_of_birth ?? person.date_of_birth,
+    phone_number: personData.phone_number,
+    residential_address:
+      personData.residential_address ?? person.residential_address,
+    state: personData.state ?? person.state,
+    emergency_contact_name:
+      personData.emergency_contact_name ?? person.emergency_contact_name,
+    emergency_contact_phone:
+      personData.emergency_contact_phone ?? person.emergency_contact_phone,
+    matric_number: personData.matric_number || person.matric_number,
+    nysc_callup_number:
+      personData.nysc_callup_number || person.nysc_callup_number,
+  });
+
+  const appUpdates = { ...appData };
+  delete appUpdates.opportunity_id;
+  delete appUpdates.application_type;
+
+  await application.update({
+    ...appUpdates,
+    status: "submitted",
+    rejection_reason: null,
+    submitted_at: new Date(),
+    resubmit_token_hash: null,
+    resubmit_token_expires_at: null,
+  });
+
+  for (const file of files) {
+    const docType = file.fieldname || "document";
+    const fileUrl = internshipFilePublicUrl(file);
+    const existing = (application.documents || []).find(
+      (d) => d.document_type === docType
+    );
+    if (existing) {
+      await existing.update({
+        file_url: fileUrl,
+        file_name: file.originalname,
+      });
+    } else {
+      await db.internship_application_document.create({
+        application_id: application.id,
+        document_type: docType,
+        file_url: fileUrl,
+        file_name: file.originalname,
+        is_required: !String(docType).startsWith("optional_"),
+      });
+    }
+    if (docType === "passport" && fileUrl) {
+      await person.update({ passport_url: fileUrl });
+    }
+  }
+
+  await db.internship_application_log.create({
+    application_id: application.id,
+    author_user_id: authorUserId,
+    log_type: "audit",
+    content: "Application resubmitted after rejection",
+    metadata: { status: "submitted" },
+  });
+
+  if (application.opportunity_id) {
+    const opportunity = await getOpportunityById(application.opportunity_id);
+    if (
+      opportunity &&
+      opportunity.slots > 0 &&
+      opportunity.slots_remaining != null &&
+      opportunity.slots_remaining <= 0 &&
+      opportunity.status === "open"
+    ) {
+      await db.internship_opportunity.update(
+        { status: "closed" },
+        { where: { id: opportunity.id } }
+      );
+    }
+  }
+
+  return {
+    application_code: application.application_code,
+    status: "submitted",
+  };
+}
+
+/** Public: load resubmit form via verified email link (no password). */
+export async function getResubmitApplicationDetail(token) {
+  const application = await findApplicationByResubmitToken(token);
+  if (!application) {
+    throw new Error("This update link is invalid or has expired");
+  }
+  const plain = application.get({ plain: true });
+  const can_resubmit = await computeCanResubmit(plain);
+  return {
+    person: application.person.get({ plain: true }),
+    application: plain,
+    can_resubmit,
+  };
+}
+
+/** Public: resubmit via verified email link (no password). */
+export async function resubmitApplicationByToken(token, body, files = []) {
+  const application = await findApplicationByResubmitToken(token);
+  if (!application) {
+    throw new Error("This update link is invalid or has expired");
+  }
+  return performApplicationResubmit(
+    application,
+    application.person,
+    body,
+    files,
+    null
+  );
 }
 
 /** Active placement for a platform user (via internship_person.user_id). */
@@ -1086,7 +1643,7 @@ export async function updatePlacementForUser(userId, body = {}) {
 
 /**
  * Signup / approved members without an internship application still need
- * office days — create person + placement (no application) on first save.
+ * office days create person + placement (no application) on first save.
  */
 export async function createManualPlacementForUser(userId, body = {}) {
   await ensureOfficeDaysColumn();
@@ -1215,7 +1772,7 @@ export async function seedDefaultOpportunities() {
       department: "Multiple Departments",
       slots: 20,
       duration: "3–6 months",
-      requirements: "Valid SIWES letter, school ID, and introduction letter.",
+      requirements: "Valid SIWES letter and introduction letter.",
       status: "open",
     },
     {

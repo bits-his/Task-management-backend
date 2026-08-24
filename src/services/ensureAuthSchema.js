@@ -117,7 +117,7 @@ export async function ensureAuthSchema(sequelize) {
     // table already exists
   });
 
-  // Department is optional on memberships — coerce NOT NULL → NULL if needed
+  // Department is optional on memberships coerce NOT NULL → NULL if needed
   try {
     const [cols] = await sequelize.query(
       `SHOW COLUMNS FROM \`user_memberships\` LIKE 'dept_id'`
