@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "seed:roadmaps": "node src/seedRoadmaps.js"
   },
   "license": "MIT",
   "dependencies": {

@@ -1,6 +1,7 @@
 import db from "../models/index.js";
 import Sequelize from "sequelize";
 import { getMembersForContext } from "./membershipService.js";
+import { getUserActiveEnrollment } from "./roadmapService.js";
 
 const { Op, fn, col } = Sequelize;
 
@@ -649,6 +650,13 @@ async function buildSiwesDashboard({ user_id, functionalities, department }) {
     limit: 8,
   });
 
+  let enrollment = null;
+  try {
+    enrollment = await getUserActiveEnrollment(user_id);
+  } catch (err) {
+    console.warn("buildSiwesDashboard enrollment error:", err.message);
+  }
+
   return withMeta(
     {
       title: "SIWES workspace",
@@ -686,32 +694,41 @@ async function buildSiwesDashboard({ user_id, functionalities, department }) {
       chart_data: toChartRows(personalCounts),
       recent_tasks,
       quick_actions: buildQuickActions(functionalities, "siwes"),
-      roadmap: [
-        {
-          id: "onboard",
-          title: "Get set up",
-          detail: "Sign attendance and open your first task",
-          href: "/app/attendance",
-        },
-        {
-          id: "tasks",
-          title: "Work your tasks",
-          detail: "Move items to in progress and complete them",
-          href: "/app/tasks",
-        },
-        {
-          id: "report",
-          title: "Submit a weekly report",
-          detail: "Summarize what you learned and delivered",
-          href: "/app/reports",
-        },
-        {
-          id: "review",
-          title: "Request feedback",
-          detail: "Send work for review when a task is ready",
-          href: "/app/tasks",
-        },
-      ],
+      roadmap_enrollment: enrollment || null,
+      roadmap: enrollment
+        ? (enrollment.phases || []).map((ph) => ({
+            id: ph.phase_id,
+            title: ph.title,
+            detail: `${ph.items?.filter((i) => i.progress?.status === "completed").length || 0}/${ph.items?.length || 0} completed`,
+            status: ph.is_current ? "current" : "upcoming",
+            href: "/app/roadmap",
+          }))
+        : [
+            {
+              id: "onboard",
+              title: "Get set up",
+              detail: "Sign attendance and open your first task",
+              href: "/app/attendance",
+            },
+            {
+              id: "tasks",
+              title: "Work your tasks",
+              detail: "Move items to in progress and complete them",
+              href: "/app/tasks",
+            },
+            {
+              id: "report",
+              title: "Submit a weekly report",
+              detail: "Summarize what you learned and delivered",
+              href: "/app/reports",
+            },
+            {
+              id: "review",
+              title: "Request feedback",
+              detail: "Send work for review when a task is ready",
+              href: "/app/tasks",
+            },
+          ],
     },
     { profile: "siwes", department, access_to: functionalities }
   );

@@ -109,10 +109,10 @@ export const NAV = {
   TICKET: "Ticket",
 };
 
-const WORK_FUNCS = "Members,Tasks,Reports";
+const WORK_FUNCS = "Members,Tasks,Reports,Roadmap";
 const USER_FUNCS =
   "Org Members,Add User,Departments,Startups,Organization Chart";
-const APP_FUNCS = "Applications,Opportunities";
+const APP_FUNCS = "Applications,Opportunities,Roadmaps";
 const OPS_FUNCS =
   "Clients,Market Research,Outreach,Schedule Meeting,PartnerShip,Deals,Sales Performance,Invoice Processing,Payroll Management,Finance Dashboard,Content Development,Assets";
 

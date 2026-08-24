@@ -17,6 +17,7 @@ import ensureBdSchema from "./services/ensureBdSchema.js";
 import ensureTicketsSchema from "./services/ensureTicketsSchema.js";
 import { ensureProjectSchema } from "./services/projectService.js";
 import { ensureAssetSchema } from "./services/assetService.js";
+import ensureRoadmapSchema from "./services/ensureRoadmapSchema.js";
 
 import userRoutes from "./routes/user.js";
 import startupsRoutes from "./routes/startups.js";
@@ -43,6 +44,7 @@ import internshipRoutes from "./routes/internship.js";
 import rolesRoutes from "./routes/roles.js";
 import projectsRoutes from "./routes/projects.js";
 import assetsRoutes from "./routes/assets.js";
+import roadmapRoutes from "./routes/roadmap.js";
 import { seedDefaultOpportunities } from "./services/internshipService.js";
 import { normalizeRolesInDb } from "./services/membershipService.js";
 
@@ -91,6 +93,7 @@ models.sequelize
     await ensureTicketsSchema(models.sequelize);
     await ensureProjectSchema();
     await ensureAssetSchema();
+    await ensureRoadmapSchema(models.sequelize);
     await seedDefaultOpportunities();
     try {
       const normalized = await normalizeRolesInDb();
@@ -145,6 +148,7 @@ pushRoutes(app);
 receiptRoutes(app);
 postRoutes(app);
 internshipRoutes(app);
+roadmapRoutes(app);
 
 server.listen(port, function () {
   const host = server.address().address;
