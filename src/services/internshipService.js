@@ -882,6 +882,22 @@ export async function approveApplication(ref, payload, authorUserId) {
     activation_expires_at: null,
   });
 
+  if (payload.roadmap_id) {
+    try {
+      const { enrollStudent } = await import("./roadmapService.js");
+      await enrollStudent({
+        roadmap_id: payload.roadmap_id,
+        user_id: userId,
+        start_date: startDate || new Date().toISOString().slice(0, 10),
+        expected_end_date: endDate,
+        mentor_user_id: supervisorId || null,
+        assigned_by: authorUserId || null,
+      });
+    } catch (rErr) {
+      console.warn("Roadmap auto-enrollment skipped:", rErr.message);
+    }
+  }
+
   const placement = await db.internship_placement.create({
     person_id: application.person_id,
     application_id: application.id,

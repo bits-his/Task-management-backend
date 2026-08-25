@@ -13,6 +13,8 @@ export default (sequelize, DataTypes) => {
       started_at: { type: DataTypes.DATE, allowNull: true },
       completed_at: { type: DataTypes.DATE, allowNull: true },
       notes: { type: DataTypes.TEXT, allowNull: true },
+      submission_url: { type: DataTypes.STRING(500), allowNull: true },
+      checklist_progress: { type: DataTypes.JSON, allowNull: true },
       task_id: { type: DataTypes.STRING(100), allowNull: true },
     },
     {

@@ -637,9 +637,10 @@ const verifyUserToken = async (req, res) => {
   }
   let decoded;
   try {
-    decoded = await jwt.verify(token, "secret");
+    const secret = process.env.JWT_SECRET || "secret";
+    decoded = jwt.verify(token, secret);
   } catch (error) {
-    console.log(error);
+    console.log("Verify token error:", error.message);
     return res.json({
       success: false,
       message: "Failed to authenticate token.",
@@ -647,8 +648,11 @@ const verifyUserToken = async (req, res) => {
     });
   }
   try {
-    const { id } = decoded;
-    const user = await User.findOne({ where: { id } });
+    const { id, user_id } = decoded;
+    const where = id ? { id } : user_id ? { user_id } : null;
+    if (!where) return res.json({ success: false, message: "Invalid token payload" });
+
+    const user = await User.findOne({ where });
 
     if (!user) {
       return res.json({ success: false, message: "user not found" });

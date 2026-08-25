@@ -6,18 +6,21 @@ import db from "../models/index.js";
  */
 export async function ensureNumberGeneratorRow(
   prefix,
-  description,
+  description = prefix,
   options = {}
 ) {
+  const desc = (typeof description === "string" && description.trim()) ? description.trim() : prefix;
+  const opts = (typeof description === "object" && description !== null) ? description : options;
+
   const {
     transaction,
     level = "1",
     max_code = 10,
     seedFromTaskIds = false,
-  } = options;
+  } = opts;
 
   let row = await db.number_generator.findOne({
-    where: { prefix, description },
+    where: { prefix, description: desc },
     lock: transaction?.LOCK?.UPDATE,
     transaction,
   });
@@ -47,7 +50,7 @@ export async function ensureNumberGeneratorRow(
         prefix,
         code: nextPk,
         last_code,
-        description,
+        description: desc,
         level,
         max_code,
       },
@@ -56,7 +59,7 @@ export async function ensureNumberGeneratorRow(
   } catch (err) {
     // Race: another request may have inserted the same prefix/description
     row = await db.number_generator.findOne({
-      where: { prefix, description },
+      where: { prefix, description: desc },
       lock: transaction?.LOCK?.UPDATE,
       transaction,
     });
@@ -70,33 +73,36 @@ export async function ensureNumberGeneratorRow(
  * Mirrors stored-procedure ID generation (STA, dpt, TAS, USR, etc.).
  * Creates the generator row if missing (e.g. TAS/task).
  */
-export async function nextCode(prefix, description, options = {}) {
+export async function nextCode(prefix, description = prefix, options = {}) {
+  const desc = (typeof description === "string" && description.trim()) ? description.trim() : prefix;
+  const opts = (typeof description === "object" && description !== null) ? description : options;
+
   const {
-    pad = 2,
+    pad = 5,
     numericOnly = false,
     transaction: outerTx,
     ensure = true,
-    seedFromTaskIds = prefix === "TAS" && description === "task",
+    seedFromTaskIds = prefix === "TAS" && desc === "task",
     level = "1",
     max_code = pad,
-  } = options;
+  } = opts;
 
   const run = async (transaction) => {
     let row = await db.number_generator.findOne({
-      where: { prefix, description },
+      where: { prefix, description: desc },
       lock: transaction.LOCK.UPDATE,
       transaction,
     });
 
     if (!row && ensure) {
-      await ensureNumberGeneratorRow(prefix, description, {
+      await ensureNumberGeneratorRow(prefix, desc, {
         transaction,
         level,
         max_code,
         seedFromTaskIds,
       });
       row = await db.number_generator.findOne({
-        where: { prefix, description },
+        where: { prefix, description: desc },
         lock: transaction.LOCK.UPDATE,
         transaction,
       });
@@ -113,8 +119,14 @@ export async function nextCode(prefix, description, options = {}) {
 
     const padded = String(next).padStart(pad, "0");
     const code = numericOnly ? padded : `${prefix}${padded}`;
-
-    return { next, code, padded, row };
+    const res = { next, code, padded, row };
+    res.toString = function () {
+      return code;
+    };
+    res[Symbol.toPrimitive] = function () {
+      return code;
+    };
+    return res;
   };
 
   if (outerTx) {
