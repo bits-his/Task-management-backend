@@ -21,19 +21,15 @@ export async function getAssets(req, res) {
       category = "",
       q = "",
       startup_id = "",
+      user_id = "",
     } = req.query;
-    if (!org_id) {
-      return res.status(400).json({
-        success: false,
-        message: "org_id is required",
-      });
-    }
     const data = await listAssets({
-      org_id,
+      org_id: org_id || null,
       status,
       category: category || null,
       q,
       startup_id: startup_id || null,
+      assignee_user_id: user_id || null,
     });
     return res.json({ success: true, data });
   } catch (error) {
@@ -146,6 +142,7 @@ export async function postAssign(req, res) {
     const { id } = req.params;
     const {
       user_id,
+      assigned_to_user_id,
       assigned_by,
       dept_id = null,
       startup_id = null,
@@ -154,6 +151,15 @@ export async function postAssign(req, res) {
       notes = null,
       role = "",
     } = req.body;
+
+    const targetUserId = user_id || assigned_to_user_id;
+
+    if (!targetUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "user_id is required",
+      });
+    }
 
     if (!canManageAssets(role)) {
       return res.status(403).json({
@@ -164,7 +170,7 @@ export async function postAssign(req, res) {
 
     const data = await assignAsset({
       asset_id: id,
-      user_id,
+      user_id: targetUserId,
       assigned_by,
       dept_id,
       startup_id,
@@ -176,7 +182,7 @@ export async function postAssign(req, res) {
     const asset = await getAssetById(id);
     CreateNotifications(
       "Asset",
-      user_id,
+      targetUserId,
       "Asset assigned",
       `${asset?.name || "An asset"} (${id}) was assigned to you.`,
       { action_url: `/app/assets/${id}` }

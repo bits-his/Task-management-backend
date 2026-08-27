@@ -49,8 +49,7 @@ export function shouldMarkAbsentForDate(dateStr) {
 
   const cutoff =
     process.env.ABSENT_CUTOFF_TIME ||
-    process.env.EXPECTED_SIGN_IN_TIME ||
-    "11:00:00";
+    "17:00:00"; // 5:00 PM cutoff
   const normalized = cutoff.length === 5 ? `${cutoff}:00` : cutoff;
   const cutoffMoment = moment.tz(
     `${today} ${normalized}`,
@@ -77,34 +76,75 @@ async function loadPlacementMetaByUserId(userIds) {
   const map = {};
   if (!userIds.length) return map;
 
-  const persons = await db.internship_person.findAll({
-    where: { user_id: { [Op.in]: userIds } },
-    attributes: ["id", "user_id"],
-    raw: true,
-  });
-  if (!persons.length) return map;
+  const parseDays = (raw) => {
+    if (Array.isArray(raw)) return raw.map((d) => String(d).toLowerCase());
+    if (typeof raw === "string" && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.map((d) => String(d).toLowerCase());
+      } catch {
+        return raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      }
+    }
+    return [];
+  };
 
-  const personToUser = Object.fromEntries(
-    persons.map((p) => [p.id, p.user_id])
-  );
-  const personIds = persons.map((p) => p.id);
+  // 1. Query users table
+  try {
+    const userRows = await db.users.findAll({
+      where: { user_id: { [Op.in]: userIds } },
+      attributes: ["user_id", "office_days", "starting_date"],
+      raw: true,
+    });
+    for (const u of userRows || []) {
+      const days = parseDays(u.office_days);
+      if (days.length) {
+        map[u.user_id] = {
+          office_days: days,
+          start_date: u.starting_date || null,
+        };
+      }
+    }
+  } catch (err) {
+    // If column missing on users table, continue
+  }
 
-  const placements = await db.internship_placement.findAll({
-    where: {
-      person_id: { [Op.in]: personIds },
-      status: "active",
-    },
-    attributes: ["person_id", "office_days", "start_date"],
-  });
+  // 2. Fall back to internship_placement for any missing userIds
+  const missingUserIds = userIds.filter((id) => !map[id]);
+  if (!missingUserIds.length) return map;
 
-  for (const placement of placements) {
-    const userId = personToUser[placement.person_id];
-    if (!userId) continue;
-    const days = placement.office_days;
-    map[userId] = {
-      office_days: Array.isArray(days) ? days : [],
-      start_date: placement.start_date || null,
-    };
+  try {
+    const persons = await db.internship_person.findAll({
+      where: { user_id: { [Op.in]: missingUserIds } },
+      attributes: ["id", "user_id"],
+      raw: true,
+    });
+    if (persons.length) {
+      const personToUser = Object.fromEntries(
+        persons.map((p) => [p.id, p.user_id])
+      );
+      const personIds = persons.map((p) => p.id);
+
+      const placements = await db.internship_placement.findAll({
+        where: {
+          person_id: { [Op.in]: personIds },
+          status: "active",
+        },
+        attributes: ["person_id", "office_days", "start_date"],
+      });
+
+      for (const placement of placements) {
+        const userId = personToUser[placement.person_id];
+        if (!userId || map[userId]) continue;
+        const days = parseDays(placement.office_days);
+        map[userId] = {
+          office_days: days,
+          start_date: placement.start_date || null,
+        };
+      }
+    }
+  } catch (err) {
+    // Graceful fallback
   }
 
   return map;
@@ -141,14 +181,12 @@ export async function getExpectedUserIdsForDate({
     const joinDate = resolveJoinDate(member, meta);
     if (joinDate && date < joinDate) continue;
 
-    if (meta) {
-      const days = meta.office_days || [];
-      if (!days.length) {
-        if (isMonToFri(date)) expected.push(uid);
-      } else if (days.includes(dayKey)) {
-        expected.push(uid);
-      }
-    } else if (isMonToFri(date)) {
+    const days =
+      meta && meta.office_days && meta.office_days.length
+        ? meta.office_days
+        : ["mon", "tue", "wed", "thu", "fri"];
+
+    if (days.includes(dayKey)) {
       expected.push(uid);
     }
   }
@@ -213,6 +251,39 @@ export async function ensureAbsentRecords({
 
     await db.attendances.bulkCreate(rows, { ignoreDuplicates: true });
     created += rows.length;
+  }
+
+  // Cleanup any legacy absent rows on dates that are NOT in the user's office_days
+  try {
+    const allAbsent = await db.attendances.findAll({
+      where: {
+        date: { [Op.between]: [start_date, end_date] },
+        status: "absent",
+      },
+      attributes: ["id", "user_id", "date"],
+      raw: true,
+    });
+    if (allAbsent.length) {
+      const uIds = [...new Set(allAbsent.map((r) => r.user_id))];
+      const placementByUser = await loadPlacementMetaByUserId(uIds);
+      const toDeleteIds = [];
+      for (const row of allAbsent) {
+        const dKey = weekdayKey(row.date);
+        const meta = placementByUser[row.user_id];
+        const days =
+          meta && meta.office_days && meta.office_days.length
+            ? meta.office_days
+            : ["mon", "tue", "wed", "thu", "fri"];
+        if (!days.includes(dKey)) {
+          toDeleteIds.push(row.id);
+        }
+      }
+      if (toDeleteIds.length) {
+        await db.attendances.destroy({ where: { id: { [Op.in]: toDeleteIds } } });
+      }
+    }
+  } catch (err) {
+    console.error("Cleanup absent rows error:", err);
   }
 
   return { created };

@@ -183,56 +183,6 @@ async function fetchCompletedTasksForUsers(userIds, dateFrom, dateTo) {
     userIds.map((id) => [String(id).toLowerCase(), String(id)])
   );
 
-  // Prefer assignee_table rows; also pull task_form for CSV assignees
-  const [rows] = await db.sequelize.query(
-    `
-    SELECT
-      t.task_id,
-      t.title,
-      t.status,
-      t.assigned_to,
-      a.user_id AS assignee_user_id,
-      DATE(
-        COALESCE(
-          a.submitted_at,
-          t.submitted_date,
-          t.end_time,
-          t.updatedAt,
-          t.created_at
-        )
-      ) AS done_date
-    FROM task_form t
-    LEFT JOIN assignee_table a
-      ON a.task_id = t.task_id
-      AND a.status != 'deactivated'
-    WHERE t.status IN (:statuses)
-      AND (
-        a.user_id IN (:userIds)
-        OR t.assigned_to IS NOT NULL
-      )
-      AND DATE(
-        COALESCE(
-          a.submitted_at,
-          t.submitted_date,
-          t.end_time,
-          t.updatedAt,
-          t.created_at
-        )
-      ) BETWEEN :dateFrom AND :dateTo
-    `,
-    {
-      replacements: {
-        userIds,
-        statuses: DONE_STATUSES,
-        dateFrom,
-        dateTo,
-      },
-    }
-  );
-
-  const out = [];
-  const seen = new Set();
-
   const resolveUser = (raw) => {
     if (!raw) return null;
     const s = String(raw).trim();
@@ -240,40 +190,136 @@ async function fetchCompletedTasksForUsers(userIds, dateFrom, dateTo) {
     return idLower.get(s.toLowerCase()) || null;
   };
 
-  for (const row of rows) {
-    const candidates = new Set();
-    const fromAssignee = resolveUser(row.assignee_user_id);
-    if (fromAssignee) candidates.add(fromAssignee);
+  const out = [];
+  const seen = new Set();
 
-    if (row.assigned_to) {
-      String(row.assigned_to)
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .forEach((id) => {
-          const resolved = resolveUser(id);
-          if (resolved) candidates.add(resolved);
+  // 1. Tasks completed / under review from task_form
+  try {
+    const [rows] = await db.sequelize.query(
+      `
+      SELECT
+        t.task_id,
+        t.title,
+        t.status,
+        t.assigned_to,
+        a.user_id AS assignee_user_id,
+        DATE(
+          COALESCE(
+            a.submitted_at,
+            t.submitted_date,
+            t.end_time,
+            t.updatedAt,
+            t.created_at
+          )
+        ) AS done_date
+      FROM task_form t
+      LEFT JOIN assignee_table a
+        ON a.task_id = t.task_id
+        AND a.status != 'deactivated'
+      WHERE t.status IN (:statuses)
+        AND (
+          a.user_id IN (:userIds)
+          OR t.assigned_to IS NOT NULL
+        )
+        AND DATE(
+          COALESCE(
+            a.submitted_at,
+            t.submitted_date,
+            t.end_time,
+            t.updatedAt,
+            t.created_at
+          )
+        ) BETWEEN :dateFrom AND :dateTo
+      `,
+      {
+        replacements: {
+          userIds,
+          statuses: DONE_STATUSES,
+          dateFrom,
+          dateTo,
+        },
+      }
+    );
+
+    for (const row of rows) {
+      const candidates = new Set();
+      const fromAssignee = resolveUser(row.assignee_user_id);
+      if (fromAssignee) candidates.add(fromAssignee);
+
+      if (row.assigned_to) {
+        String(row.assigned_to)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .forEach((id) => {
+            const resolved = resolveUser(id);
+            if (resolved) candidates.add(resolved);
+          });
+      }
+
+      if (!candidates.size) continue;
+      const done = asDateOnly(row.done_date) || dateTo;
+
+      for (const user_id of candidates) {
+        const key = `${user_id}:${row.task_id}:${done}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          user_id,
+          task_id: row.task_id,
+          title: row.title,
+          status: row.status,
+          done_date: done,
+          item_source: "task",
         });
+      }
     }
+  } catch (err) {
+    console.error("Error querying task_form:", err?.message);
+  }
 
-    // Skip tasks that matched only via assigned_to IS NOT NULL but no user in set
-    if (!candidates.size) continue;
+  // 2. Roadmap items completed on the day
+  try {
+    const [roadmapRows] = await db.sequelize.query(
+      `
+      SELECT
+        ri.item_id AS task_id,
+        ri.title AS title,
+        'completed' AS status,
+        re.user_id AS user_id,
+        DATE(rp.completed_at) AS done_date
+      FROM roadmap_progress rp
+      JOIN roadmap_items ri ON ri.item_id = rp.item_id
+      JOIN roadmap_enrollments re ON re.enrollment_id = rp.enrollment_id
+      WHERE rp.status = 'completed'
+        AND re.user_id IN (:userIds)
+        AND DATE(rp.completed_at) BETWEEN :dateFrom AND :dateTo
+      `,
+      {
+        replacements: { userIds, dateFrom, dateTo },
+      }
+    );
 
-    const done = asDateOnly(row.done_date) || dateTo;
-
-    for (const user_id of candidates) {
-      const key = `${user_id}:${row.task_id}:${done}`;
+    for (const rRow of roadmapRows || []) {
+      const resolved = resolveUser(rRow.user_id);
+      if (!resolved) continue;
+      const done = asDateOnly(rRow.done_date) || dateTo;
+      const key = `${resolved}:${rRow.task_id}:${done}`;
       if (seen.has(key)) continue;
       seen.add(key);
       out.push({
-        user_id,
-        task_id: row.task_id,
-        title: row.title,
-        status: row.status,
+        user_id: resolved,
+        task_id: rRow.task_id,
+        title: rRow.title,
+        status: "completed",
         done_date: done,
+        item_source: "roadmap",
       });
     }
+  } catch (err) {
+    // Graceful fallback if roadmap tables don't exist yet
   }
+
   return out;
 }
 
@@ -365,9 +411,23 @@ const handleWeeklyReport = async (req, res) => {
       resp = [{ user_id, report_date }];
     } else if (query_type === "suggested_tasks") {
       const date = report_date || new Date().toISOString().slice(0, 10);
+      const parts = date.split("-");
+      let searchFrom = date;
+      if (parts.length === 3) {
+        const dObj = new Date(
+          Number(parts[0]),
+          Number(parts[1]) - 1,
+          Number(parts[2])
+        );
+        if (dObj.getDay() === 1) {
+          const sat = new Date(dObj);
+          sat.setDate(sat.getDate() - 2);
+          searchFrom = sat.toISOString().slice(0, 10);
+        }
+      }
       const completed = await fetchCompletedTasksForUsers(
         [user_id],
-        date,
+        searchFrom,
         date
       );
       const report = await db.weekly_reports.findOne({
@@ -379,6 +439,16 @@ const handleWeeklyReport = async (req, res) => {
           .filter((i) => i.task_id)
           .map((i) => String(i.task_id))
       );
+      const getWeekendNote = (dateStr) => {
+        if (!dateStr) return null;
+        const p = String(dateStr).slice(0, 10).split("-");
+        if (p.length === 3) {
+          const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+          if (d.getDay() === 6) return "Completed Sat";
+          if (d.getDay() === 0) return "Completed Sun";
+        }
+        return null;
+      };
       resp = completed
         .filter((t) => !attached.has(String(t.task_id)))
         .map((t) => ({
@@ -386,6 +456,10 @@ const handleWeeklyReport = async (req, res) => {
           title: t.title,
           status: t.status,
           done_date: t.done_date,
+          weekend_note: getWeekendNote(t.done_date),
+          item_source:
+            t.item_source ||
+            (String(t.task_id).startsWith("RIT") ? "roadmap" : "task"),
         }));
     }
 
@@ -418,9 +492,103 @@ const getUserReports = (req, res) => {
   handleWeeklyReport(req, res);
 };
 
+const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function getWeekdayKey(dateStr) {
+  if (!dateStr) return "";
+  const s = String(dateStr).slice(0, 10);
+  const parts = s.split("-");
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return WEEKDAY_KEYS[d.getDay()] || "";
+  }
+  return "";
+}
+
+async function loadOfficeDaysForUsers(userIds) {
+  const map = {};
+  if (!userIds.length) return map;
+
+  const parseDays = (raw) => {
+    if (Array.isArray(raw)) return raw.map((d) => String(d).toLowerCase());
+    if (typeof raw === "string" && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed))
+          return parsed.map((d) => String(d).toLowerCase());
+      } catch {
+        return raw
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+      }
+    }
+    return [];
+  };
+
+  // 1. Query users table
+  try {
+    const userRows = await db.users.findAll({
+      where: { user_id: { [Op.in]: userIds } },
+      attributes: ["user_id", "office_days"],
+      raw: true,
+    });
+    for (const u of userRows || []) {
+      const days = parseDays(u.office_days);
+      if (days.length) {
+        map[u.user_id] = days;
+      }
+    }
+  } catch (err) {
+    // If column doesn't exist yet on users table, ignore
+  }
+
+  // 2. Fall back to internship_placement for any missing userIds
+  const missingUserIds = userIds.filter((id) => !map[id]);
+  if (!missingUserIds.length) return map;
+
+  try {
+    const persons = await db.internship_person.findAll({
+      where: { user_id: { [Op.in]: missingUserIds } },
+      attributes: ["id", "user_id"],
+      raw: true,
+    });
+    if (persons.length) {
+      const personToUser = Object.fromEntries(
+        persons.map((p) => [p.id, p.user_id])
+      );
+      const personIds = persons.map((p) => p.id);
+
+      const placements = await db.internship_placement.findAll({
+        where: {
+          person_id: { [Op.in]: personIds },
+          status: "active",
+        },
+        attributes: ["person_id", "office_days"],
+      });
+
+      for (const placement of placements) {
+        const userId = personToUser[placement.person_id];
+        if (!userId) continue;
+        const days = parseDays(placement.office_days);
+        if (days.length) {
+          map[userId] = days;
+        }
+      }
+    }
+  } catch (err) {
+    // Graceful fallback
+  }
+
+  return map;
+}
+
 const transformData = (dbResults, currentUserId, extras = {}) => {
-  const { itemsByReportId = new Map(), completedByUserDate = new Map() } =
-    extras;
+  const {
+    itemsByReportId = new Map(),
+    completedByUserDate = new Map(),
+    officeDaysByUser = {},
+  } = extras;
   const currentUser = dbResults.find((row) => row.user_id === currentUserId);
 
   const teamMembersMap = new Map();
@@ -432,6 +600,7 @@ const transformData = (dbResults, currentUserId, extras = {}) => {
         role: row.role,
         startupName: row.startup_name,
         starting_date: row.member_start || row.starting_date || null,
+        office_days: officeDaysByUser[row.user_id] || [],
       });
     }
   });
@@ -448,8 +617,21 @@ const transformData = (dbResults, currentUserId, extras = {}) => {
     const attachedIds = new Set(
       items.filter((i) => i.task_id).map((i) => String(i.task_id))
     );
-    const suggested = completed.filter(
-      (t) => !attachedIds.has(String(t.task_id))
+    const suggested = completed
+      .filter((t) => !attachedIds.has(String(t.task_id)))
+      .map((t) => ({
+        ...t,
+        item_source:
+          t.item_source ||
+          (String(t.task_id).startsWith("RIT") ? "roadmap" : "task"),
+      }));
+
+    const userOfficeDays = officeDaysByUser[row.user_id];
+    const dayKey = getWeekdayKey(reportDate);
+    const notScheduled = Boolean(
+      userOfficeDays &&
+        userOfficeDays.length > 0 &&
+        !userOfficeDays.includes(dayKey)
     );
 
     const dailyReport = {
@@ -458,6 +640,7 @@ const transformData = (dbResults, currentUserId, extras = {}) => {
       content: row.report_content || "",
       status: row.report_status || "pending",
       last_edited: row.last_edited,
+      not_scheduled: notScheduled,
       items,
       suggested_tasks: suggested,
       daily_tasks: items
@@ -653,21 +836,64 @@ export const getAllReports = async (req, res) => {
     ];
     const userIds = [...new Set(results.map((r) => r.user_id))];
 
-    const [itemsByReportId, completed] = await Promise.all([
+    const [itemsByReportId, completed, officeDaysByUser] = await Promise.all([
       loadItemsByReportIds(reportIds),
       fetchCompletedTasksForUsers(userIds, date_from, date_to),
+      loadOfficeDaysForUsers(userIds),
     ]);
+
+    const getWeekendNote = (dateStr) => {
+      if (!dateStr) return null;
+      const parts = String(dateStr).slice(0, 10).split("-");
+      if (parts.length === 3) {
+        const d = new Date(
+          Number(parts[0]),
+          Number(parts[1]) - 1,
+          Number(parts[2])
+        );
+        const day = d.getDay();
+        if (day === 6) return "Completed Sat";
+        if (day === 0) return "Completed Sun";
+      }
+      return null;
+    };
+
+    const getMondayForDate = (dateStr) => {
+      const parts = String(dateStr).slice(0, 10).split("-");
+      if (parts.length === 3) {
+        const d = new Date(
+          Number(parts[0]),
+          Number(parts[1]) - 1,
+          Number(parts[2])
+        );
+        const day = d.getDay();
+        if (day === 6) {
+          d.setDate(d.getDate() + 2);
+          return d.toISOString().slice(0, 10);
+        }
+        if (day === 0) {
+          d.setDate(d.getDate() + 1);
+          return d.toISOString().slice(0, 10);
+        }
+      }
+      return asDateOnly(dateStr);
+    };
 
     const completedByUserDate = new Map();
     for (const t of completed) {
-      const key = `${t.user_id}:${asDateOnly(t.done_date)}`;
+      const targetDate = getMondayForDate(t.done_date);
+      const key = `${t.user_id}:${targetDate}`;
       if (!completedByUserDate.has(key)) completedByUserDate.set(key, []);
-      completedByUserDate.get(key).push(t);
+      completedByUserDate.get(key).push({
+        ...t,
+        weekend_note: getWeekendNote(t.done_date),
+      });
     }
 
     const payload = transformData(results, viewer_user_id, {
       itemsByReportId,
       completedByUserDate,
+      officeDaysByUser,
     });
     payload.data.range = { from: date_from, to: date_to };
     res.json(payload);

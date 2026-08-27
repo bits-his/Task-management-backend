@@ -419,6 +419,7 @@ const getAttendanceHistory = async (req, res) => {
             "status",
             "starting_date",
             "end_date",
+            "office_days",
             "createdAt",
             "updatedAt",
           ],
@@ -452,8 +453,7 @@ const getAttendanceHistory = async (req, res) => {
           "status",
           "starting_date",
           "end_date",
-          "createdAt",
-          "updatedAt",
+          "office_days",
         ],
         raw: true,
       });
@@ -474,10 +474,40 @@ const getAttendanceHistory = async (req, res) => {
       ? await getPrimaryMembershipMap(userIds)
       : {};
 
+    const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const parseUserOfficeDays = (raw) => {
+      if (Array.isArray(raw)) return raw.map((d) => String(d).toLowerCase());
+      if (typeof raw === "string" && raw.trim()) {
+        try {
+          const p = JSON.parse(raw);
+          if (Array.isArray(p)) return p.map((d) => String(d).toLowerCase());
+        } catch {
+          return raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        }
+      }
+      return ["mon", "tue", "wed", "thu", "fri"];
+    };
+
     const data = rows.map((a) => {
       const plain = a.get({ plain: true });
       const u = plain.users || fallbackUsers[plain.user_id] || {};
       const ctx = primaryMap[u.user_id || plain.user_id] || {};
+
+      const dStr = String(plain.date).slice(0, 10);
+      const parts = dStr.split("-");
+      let dayKey = "";
+      if (parts.length === 3) {
+        const dObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        dayKey = WEEKDAY_KEYS[dObj.getDay()] || "";
+      }
+      const userOfficeDays = parseUserOfficeDays(u.office_days);
+      const isOfficeDay = userOfficeDays.includes(dayKey);
+
+      let attendanceStatus = plain.status;
+      if (!isOfficeDay && (!plain.sign_in_time || plain.status === "absent")) {
+        attendanceStatus = "non_office_day";
+      }
+
       return {
         user_id: u.user_id || plain.user_id,
         fullname: u.fullname || null,
@@ -496,7 +526,7 @@ const getAttendanceHistory = async (req, res) => {
         date: plain.date,
         sign_in_time: plain.sign_in_time,
         sign_out_time: plain.sign_out_time,
-        attendance_status: plain.status,
+        attendance_status: attendanceStatus,
         notes: plain.notes,
         sign_out_status: plain.sign_out_status,
         network_name: plain.network_name,

@@ -122,11 +122,13 @@ export async function listAssets({
   category = null,
   q = "",
   startup_id = null,
+  assignee_user_id = null,
 }) {
   await ensureAssetSchema();
-  if (!org_id) return [];
 
-  const where = { org_id: String(org_id) };
+  const where = {};
+  if (org_id) where.org_id = String(org_id);
+  if (assignee_user_id) where.current_assignee_user_id = String(assignee_user_id);
   if (status && status !== "all") where.status = status;
   if (category) where.category = String(category);
   if (startup_id) where.startup_id = startup_id;
@@ -221,6 +223,12 @@ export async function createAsset(payload = {}) {
     });
     const asset_id = `AST-${String(next).padStart(5, "0")}`;
 
+    let finalStatus = nextStatus;
+    const assigneeId = payload.current_assignee_user_id || null;
+    if (assigneeId) {
+      finalStatus = "assigned";
+    }
+
     const row = await db.assets.create(
       {
         asset_id,
@@ -239,8 +247,9 @@ export async function createAsset(payload = {}) {
             : Number(purchase_cost),
         supplier: supplier || null,
         warranty_expiry: toDateOnly(warranty_expiry),
-        status: nextStatus,
+        status: finalStatus,
         current_location: current_location || null,
+        current_assignee_user_id: assigneeId,
         notes: notes || null,
         image: image || null,
         created_by: created_by || null,
@@ -248,10 +257,23 @@ export async function createAsset(payload = {}) {
       { transaction }
     );
 
+    if (assigneeId) {
+      await db.asset_assignments.create(
+        {
+          asset_id,
+          user_id: assigneeId,
+          assigned_at: new Date(),
+          assigned_by: created_by || null,
+          notes: "Assigned on asset creation",
+        },
+        { transaction }
+      );
+    }
+
     await recordStatusChange({
       asset_id,
       from_status: null,
-      to_status: nextStatus,
+      to_status: finalStatus,
       changed_by: created_by,
       reason: "Asset created",
       transaction,

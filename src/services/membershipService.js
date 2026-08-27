@@ -436,6 +436,11 @@ export async function deleteMembership(id, user_id) {
     raw: true,
   });
   if (!row) return false;
+
+  if (!row.startup_id) {
+    throw new Error("Organizational context cannot be deleted.");
+  }
+
   await db.user_memberships.destroy({ where: { id, user_id } });
 
   if (row.is_primary) {

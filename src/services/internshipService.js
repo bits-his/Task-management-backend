@@ -825,6 +825,7 @@ export async function approveApplication(ref, payload, authorUserId) {
       org_id: orgId,
       starting_date: startDate || null,
       end_date: endDate || null,
+      office_days: JSON.stringify(officeDays),
       profile: person.passport_url || null,
       email_verified: true,
     });
@@ -838,6 +839,7 @@ export async function approveApplication(ref, payload, authorUserId) {
         address: person.residential_address || "",
         starting_date: startDate || null,
         end_date: endDate || null,
+        office_days: JSON.stringify(officeDays),
         profile: person.passport_url || null,
       },
       { where: { user_id: userId } }
@@ -1650,6 +1652,17 @@ export async function getPlacementForUser(userId) {
 /** Update or create office schedule for a platform user (placement or signup). */
 export async function updatePlacementForUser(userId, body = {}) {
   await ensureOfficeDaysColumn();
+  if (body.office_days !== undefined) {
+    const days = normalizeOfficeDays(body.office_days);
+    try {
+      await db.users.update(
+        { office_days: JSON.stringify(days) },
+        { where: { user_id: String(userId) } }
+      );
+    } catch (err) {
+      console.error("Failed to sync office_days to users table:", err?.message);
+    }
+  }
   const current = await getPlacementForUser(userId);
   if (current) {
     return updatePlacement(current.id, body);
@@ -1717,6 +1730,10 @@ export async function createManualPlacementForUser(userId, body = {}) {
     office_days: officeDays,
     status: body.status || "active",
   });
+
+  try {
+    await user.update({ office_days: JSON.stringify(officeDays) });
+  } catch (err) {}
 
   return placement.get({ plain: true });
 }

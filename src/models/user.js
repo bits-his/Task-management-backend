@@ -36,6 +36,10 @@ export default (sequelize, DataTypes) => {
       org_id: DataTypes.STRING,
       starting_date: DataTypes.STRING,
       end_date: DataTypes.STRING,
+      office_days: {
+        type: DataTypes.TEXT("long"),
+        allowNull: true,
+      },
       nin: {
         type: DataTypes.TEXT("long"),
         allowNull: true,
